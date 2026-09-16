@@ -1,0 +1,6 @@
+CREATE TABLE events (
+    id VARCHAR(255) PRIMARY KEY NOT NULL,
+    type VARCHAR(255) NOT NULL,
+    data JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
