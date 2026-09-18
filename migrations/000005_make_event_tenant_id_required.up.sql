@@ -1,0 +1,2 @@
+ALTER TABLE events
+ALTER COLUMN tenant_id SET NOT NULL;
