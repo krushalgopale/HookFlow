@@ -33,7 +33,7 @@ func CreateTenant(db *pgxpool.Pool) http.HandlerFunc {
 		}
 		
 		// Tenant ID Generation
-		tenant.ID = "ten" + uuid.New().String()
+		tenant.ID = "org_" + uuid.New().String()
 		
 		// Database Operation
 		err = repository.SaveTenant(db, r.Context(), tenant.ID, tenant.Name,)
