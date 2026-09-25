@@ -16,6 +16,7 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 	mux.HandleFunc("GET /event/{id}", handler.GetEvent(db))
 	mux.HandleFunc("GET /events", handler.ListEvents(db))
 	mux.HandleFunc("POST /tenant", handler.CreateTenant(db))
+	mux.HandleFunc("GET /tenant/{id}", handler.GetTenant(db))
 	mux.HandleFunc("GET /tenants", handler.ListTenants(db))
 	return mux
 }

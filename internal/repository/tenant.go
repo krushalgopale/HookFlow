@@ -23,6 +23,26 @@ func SaveTenant(
 	return err
 }
 
+func GetTenant(
+	db *pgxpool.Pool, 
+	ctx context.Context,
+	tenantID string,
+) (*models.Tenant, error) {
+	var tenant models.Tenant
+
+	err := db.QueryRow(
+		ctx,
+		`SELECT id, name, created_at, updated_at FROM tenants WHERE id = $1`,
+		tenantID,
+		).Scan(&tenant.ID, &tenant.Name, &tenant.CreatedAt, &tenant.UpdatedAt)
+
+	if err != nil {
+		return &models.Tenant{}, err
+	}
+
+	return &tenant, nil
+}
+
 func ListTenants(
 	db *pgxpool.Pool,
 	ctx context.Context,

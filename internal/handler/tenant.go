@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/krushalgopale/HookFlow/internal/models"
 	"github.com/krushalgopale/HookFlow/internal/repository"
@@ -31,13 +32,12 @@ func CreateTenant(db *pgxpool.Pool) http.HandlerFunc {
 			})
 			return
 		}
-		
+
 		// Tenant ID Generation
 		tenant.ID = "org_" + uuid.New().String()
-		
+
 		// Database Operation
-		err = repository.SaveTenant(db, r.Context(), tenant.ID, tenant.Name,)
-		
+		err = repository.SaveTenant(db, r.Context(), tenant.ID, tenant.Name)
 		// Error Handling
 		if err != nil {
 			log.Println("Database Error", err)
@@ -47,7 +47,7 @@ func CreateTenant(db *pgxpool.Pool) http.HandlerFunc {
 
 		// Server Response
 		response := models.TenantResponse{
-			ID: tenant.ID,
+			ID:     tenant.ID,
 			Status: "accepted",
 		}
 
@@ -55,23 +55,46 @@ func CreateTenant(db *pgxpool.Pool) http.HandlerFunc {
 		w.WriteHeader(http.StatusAccepted)
 
 		json.NewEncoder(w).Encode(response)
+	}
+}
 
+func GetTenant(db *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Path parameter
+		tenantID := r.PathValue("id")
+
+		// Database Operation
+		tenant, err := repository.GetTenant(db, r.Context(), tenantID)
+		if err != nil {
+
+			if err == pgx.ErrNoRows {
+				http.Error(w, "Tenant not found", http.StatusNotFound)
+				return
+			}
+
+			http.Error(w, "Failed to fetch Tenant", http.StatusInternalServerError)
+			return
+		}
+
+		// Server Response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		json.NewEncoder(w).Encode(tenant)
 	}
 }
 
 func ListTenants(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		// Database Operation
-		tenants, err := repository.ListTenants(db, r.Context(),)
-
+		tenants, err := repository.ListTenants(db, r.Context())
 		// Error Handling
 		if err != nil {
-			http.Error(w, "Failed to fetch tenants", http.StatusInternalServerError,)
-			return 
+			http.Error(w, "Failed to fetch tenants", http.StatusInternalServerError)
+			return
 		}
 
-		// Server Response 
+		// Server Response
 		response := models.TenantListResponse{
 			Tenants: tenants,
 		}
