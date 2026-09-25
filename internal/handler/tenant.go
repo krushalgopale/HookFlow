@@ -51,10 +51,33 @@ func CreateTenant(db *pgxpool.Pool) http.HandlerFunc {
 			Status: "accepted",
 		}
 
-		w.Header().Set("Content Type", "application/json")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 
 		json.NewEncoder(w).Encode(response)
 
+	}
+}
+
+func ListTenants(db *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		// Database Operation
+		tenants, err := repository.ListTenants(db, r.Context(),)
+
+		// Error Handling
+		if err != nil {
+			http.Error(w, "Failed to fetch tenants", http.StatusInternalServerError,)
+			return 
+		}
+
+		// Server Response 
+		response := models.TenantListResponse{
+			Tenants: tenants,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
 	}
 }
