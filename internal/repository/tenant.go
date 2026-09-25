@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/krushalgopale/HookFlow/internal/models"
 )
@@ -80,4 +81,28 @@ func ListTenants(
 	}
 
 	return tenants, nil
+}
+
+func UpdateTenant(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	tenantID string,
+	tenantName string,
+) error {
+	result, err := db.Exec(
+		ctx,
+		`UPDATE tenants SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+		tenantName,
+		tenantID,
+		)
+
+	if err != nil {
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+
+	return nil
 }

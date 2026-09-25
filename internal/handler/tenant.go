@@ -104,3 +104,52 @@ func ListTenants(db *pgxpool.Pool) http.HandlerFunc {
 		json.NewEncoder(w).Encode(response)
 	}
 }
+
+func UpdateTenant(db *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var tenant models.Tenant
+
+		// Path parameter
+		tenantID := r.PathValue("id")
+
+		// JSON handling
+		err := json.NewDecoder(r.Body).Decode(&tenant)
+		if err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		if tenant.Name == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+
+			json.NewEncoder(w).Encode(models.ErrResponse{
+				Error: "Tenant name is required",
+			})
+			return
+		}
+
+		// Database Operation
+		err = repository.UpdateTenant(db, r.Context(), tenantID, tenant.Name)
+		// Error Handling
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				http.Error(w, "Tenant not found", http.StatusNotFound)
+				return
+			}
+
+			http.Error(w, "Failed to update tenant", http.StatusInternalServerError)
+			return
+		}
+
+		// Server Response
+		response := models.TenantResponse{
+			Status: "updated",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		json.NewEncoder(w).Encode(response)
+	}
+}
