@@ -106,3 +106,26 @@ func UpdateTenant(
 
 	return nil
 }
+
+func DeleteTenant(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	tenantID string,
+) error {
+
+	result, err := db.Exec(
+		ctx,
+		`DELETE FROM tenants WHERE id = $1`,
+		tenantID,
+		)
+
+	if err != nil {
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	} 
+
+	return nil
+}

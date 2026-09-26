@@ -19,5 +19,6 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 	mux.HandleFunc("GET /tenant/{id}", handler.GetTenant(db))
 	mux.HandleFunc("GET /tenants", handler.ListTenants(db))
 	mux.HandleFunc("PATCH /tenant/{id}", handler.UpdateTenant(db))
+	mux.HandleFunc("DELETE /tenant/{id}", handler.DeleteTenant(db))
 	return mux
 }

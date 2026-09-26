@@ -153,3 +153,32 @@ func UpdateTenant(db *pgxpool.Pool) http.HandlerFunc {
 		json.NewEncoder(w).Encode(response)
 	}
 }
+
+func DeleteTenant(db *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tenantID := r.PathValue("id")
+
+		// Database Operation
+		err := repository.DeleteTenant(db, r.Context(), tenantID)
+		// Error Handling
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				http.Error(w, "Tenant not found", http.StatusNotFound)
+				return
+			}
+
+			http.Error(w, "Failed to delete tenant", http.StatusInternalServerError)
+			return
+		}
+
+		// Server Response
+		response := models.TenantResponse{
+			Status: "deleted",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		json.NewEncoder(w).Encode(response)
+	}
+}
