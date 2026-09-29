@@ -12,31 +12,34 @@ func SaveTenant(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	tenantID string,
+	userID string,
 	tenantName string,
 ) error {
 	_, err := db.Exec(
 		ctx,
-		`INSERT INTO tenants (id, name)
-		VALUES ($1, $2)`,
+		`INSERT INTO tenants (id, user_id, name)
+		VALUES ($1, $2, $3)`,
 		tenantID,
+		userID,
 		tenantName,
 	)
 	return err
 }
 
 func GetTenant(
-	db *pgxpool.Pool, 
+	db *pgxpool.Pool,
 	ctx context.Context,
 	tenantID string,
+	userID string,
 ) (*models.Tenant, error) {
 	var tenant models.Tenant
 
 	err := db.QueryRow(
 		ctx,
-		`SELECT id, name, created_at, updated_at FROM tenants WHERE id = $1`,
+		`SELECT id, user_id, name, created_at, updated_at FROM tenants WHERE id = $1 AND user_id = $2`,
 		tenantID,
-		).Scan(&tenant.ID, &tenant.Name, &tenant.CreatedAt, &tenant.UpdatedAt)
-
+		userID,
+	).Scan(&tenant.ID, &tenant.UserID, &tenant.Name, &tenant.CreatedAt, &tenant.UpdatedAt)
 	if err != nil {
 		return &models.Tenant{}, err
 	}
@@ -47,10 +50,12 @@ func GetTenant(
 func ListTenants(
 	db *pgxpool.Pool,
 	ctx context.Context,
+	userID string,
 ) ([]models.Tenant, error) {
 	rows, err := db.Query(
 		ctx,
-		`SELECT id, name, created_at, updated_at FROM tenants ORDER BY created_at DESC`,
+		`SELECT id, user_id, name, created_at, updated_at FROM tenants WHERE user_id = $1 ORDER BY created_at DESC`,
+		userID,
 	)
 	if err != nil {
 		return nil, err
@@ -64,6 +69,7 @@ func ListTenants(
 
 		err := rows.Scan(
 			&tenant.ID,
+			&tenant.UserID,
 			&tenant.Name,
 			&tenant.CreatedAt,
 			&tenant.UpdatedAt,
@@ -87,15 +93,16 @@ func UpdateTenant(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	tenantID string,
+	userID string,
 	tenantName string,
 ) error {
 	result, err := db.Exec(
 		ctx,
-		`UPDATE tenants SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+		`UPDATE tenants SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3`,
 		tenantName,
 		tenantID,
-		)
-
+		userID,
+	)
 	if err != nil {
 		return err
 	}
@@ -111,21 +118,21 @@ func DeleteTenant(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	tenantID string,
+	userID string,
 ) error {
-
 	result, err := db.Exec(
 		ctx,
-		`DELETE FROM tenants WHERE id = $1`,
+		`DELETE FROM tenants WHERE id = $1 AND user_id = $2`,
 		tenantID,
-		)
-
+		userID,
+	)
 	if err != nil {
 		return err
 	}
 
 	if result.RowsAffected() == 0 {
 		return pgx.ErrNoRows
-	} 
+	}
 
 	return nil
 }
