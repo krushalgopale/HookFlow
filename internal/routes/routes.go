@@ -13,17 +13,23 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 
 	// Registering Route using HandleFunc/Handle
 	mux.HandleFunc("GET /health", handler.Health)
+
+	// Auth
 	mux.HandleFunc("POST /auth/signup", handler.Signup(db))
 	mux.HandleFunc("POST /auth/signin", handler.Signin(db))
 	mux.HandleFunc("POST /auth/signout", handler.Signout)
 	mux.Handle("GET /auth/me", middleware.Auth(handler.Me(db)))
+
+	// Event
 	mux.HandleFunc("POST /event", handler.CreateEvent(db))
 	mux.HandleFunc("GET /event/{id}", handler.GetEvent(db))
 	mux.HandleFunc("GET /events", handler.ListEvents(db))
-	mux.HandleFunc("POST /tenant", handler.CreateTenant(db))
-	mux.HandleFunc("GET /tenant/{id}", handler.GetTenant(db))
-	mux.HandleFunc("GET /tenants", handler.ListTenants(db))
-	mux.HandleFunc("PATCH /tenant/{id}", handler.UpdateTenant(db))
-	mux.HandleFunc("DELETE /tenant/{id}", handler.DeleteTenant(db))
+
+	// Tenant
+	mux.Handle("POST /tenant", middleware.Auth(handler.CreateTenant(db)))
+	mux.Handle("GET /tenant/{id}", middleware.Auth(handler.GetTenant(db)))
+	mux.Handle("GET /tenants", middleware.Auth(handler.ListTenants(db)))
+	mux.Handle("PATCH /tenant/{id}", middleware.Auth(handler.UpdateTenant(db)))
+	mux.Handle("DELETE /tenant/{id}", middleware.Auth(handler.DeleteTenant(db)))
 	return mux
 }

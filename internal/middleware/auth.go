@@ -18,7 +18,7 @@ func Auth(next http.Handler) http.Handler {
 		// Authentication Cookie
 		cookie, err := r.Cookie("access_token")
 		if err != nil {
-			http.Error(w, "Authentcation required", http.StatusUnauthorized)
+			http.Error(w, "Authentication required", http.StatusUnauthorized)
 			return
 		}
 
