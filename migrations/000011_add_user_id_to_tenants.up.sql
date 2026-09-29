@@ -1,0 +1,2 @@
+ALTER TABLE tenants
+ADD COLUMN user_id VARCHAR(100);
