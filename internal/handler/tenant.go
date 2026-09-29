@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/krushalgopale/HookFlow/internal/middleware"
 	"github.com/krushalgopale/HookFlow/internal/models"
 	"github.com/krushalgopale/HookFlow/internal/repository"
 )
@@ -33,11 +34,18 @@ func CreateTenant(db *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
+		// Get User ID from request context
+		userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		// Tenant ID Generation
 		tenant.ID = "org_" + uuid.New().String()
 
 		// Database Operation
-		err = repository.SaveTenant(db, r.Context(), tenant.ID, tenant.Name)
+		err = repository.SaveTenant(db, r.Context(), tenant.ID, userID, tenant.Name)
 		// Error Handling
 		if err != nil {
 			log.Println("Database Error", err)
@@ -47,7 +55,6 @@ func CreateTenant(db *pgxpool.Pool) http.HandlerFunc {
 
 		// Server Response
 		response := models.TenantResponse{
-			ID:     tenant.ID,
 			Status: "accepted",
 		}
 
@@ -63,8 +70,15 @@ func GetTenant(db *pgxpool.Pool) http.HandlerFunc {
 		// Path parameter
 		tenantID := r.PathValue("id")
 
+		// Get User ID from request context
+		userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		// Database Operation
-		tenant, err := repository.GetTenant(db, r.Context(), tenantID)
+		tenant, err := repository.GetTenant(db, r.Context(), tenantID, userID)
 		if err != nil {
 
 			if err == pgx.ErrNoRows {
@@ -86,8 +100,15 @@ func GetTenant(db *pgxpool.Pool) http.HandlerFunc {
 
 func ListTenants(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Get User ID from request context
+		userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		// Database Operation
-		tenants, err := repository.ListTenants(db, r.Context())
+		tenants, err := repository.ListTenants(db, r.Context(), userID)
 		// Error Handling
 		if err != nil {
 			http.Error(w, "Failed to fetch tenants", http.StatusInternalServerError)
@@ -108,6 +129,13 @@ func ListTenants(db *pgxpool.Pool) http.HandlerFunc {
 func UpdateTenant(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var tenant models.Tenant
+
+		// Get User ID from request context
+		userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 
 		// Path parameter
 		tenantID := r.PathValue("id")
@@ -130,7 +158,7 @@ func UpdateTenant(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Database Operation
-		err = repository.UpdateTenant(db, r.Context(), tenantID, tenant.Name)
+		err = repository.UpdateTenant(db, r.Context(), tenantID, userID, tenant.Name)
 		// Error Handling
 		if err != nil {
 			if err == pgx.ErrNoRows {
@@ -156,10 +184,18 @@ func UpdateTenant(db *pgxpool.Pool) http.HandlerFunc {
 
 func DeleteTenant(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Get User ID from request context
+		userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Path parameter
 		tenantID := r.PathValue("id")
 
 		// Database Operation
-		err := repository.DeleteTenant(db, r.Context(), tenantID)
+		err := repository.DeleteTenant(db, r.Context(), tenantID, userID)
 		// Error Handling
 		if err != nil {
 			if err == pgx.ErrNoRows {
