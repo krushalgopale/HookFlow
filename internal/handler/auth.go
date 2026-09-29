@@ -9,6 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/krushalgopale/HookFlow/internal/auth"
+	"github.com/krushalgopale/HookFlow/internal/middleware"
 	"github.com/krushalgopale/HookFlow/internal/models"
 	"github.com/krushalgopale/HookFlow/internal/repository"
 	"golang.org/x/crypto/bcrypt"
@@ -132,15 +134,60 @@ func Signin(db *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
+		// Token Generation
+		accessToken, err := auth.GenerateAccessToken(user.ID)
+		if err != nil {
+			http.Error(w, "Failed to generate access token", http.StatusInternalServerError)
+			return
+		}
+
+		// Set Authentication Cookie
+		http.SetCookie(w, &http.Cookie{
+			Name:     "access_token",
+			Value:    accessToken,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   false,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   15 * 60,
+		})
+
 		// Server Response
-		response := models.AuthResponse{
-			ID:     user.ID,
-			Status: "authenticated",
+		response := map[string]string{
+			"status": "signed in",
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
 		json.NewEncoder(w).Encode(response)
+	}
+}
+
+func Me(db *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+
+		if !ok || userID == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		user, err := repository.GetUserByID(db, r.Context(), userID)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				http.Error(w, "User not found", http.StatusNotFound)
+				return
+			}
+
+			http.Error(w, "Failed to fetch user", http.StatusInternalServerError)
+			return
+		}
+
+		// Server Response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		json.NewEncoder(w).Encode(user)
 	}
 }

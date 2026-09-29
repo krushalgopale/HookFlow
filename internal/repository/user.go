@@ -49,3 +49,28 @@ func GetUserByEmail(
 
 	return user, nil
 }
+
+func GetUserByID(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	userID string,
+) (models.User, error) {
+	var user models.User
+
+	err := db.QueryRow(
+		ctx,
+		`SELECT id, email, password_hash, created_at, updated_at FROM users WHERE id = $1`,
+		userID,
+	).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Password,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	return user, nil
+}
