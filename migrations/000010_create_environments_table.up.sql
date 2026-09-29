@@ -1,0 +1,12 @@
+CREATE TABLE environments (
+  id VARCHAR(100) PRIMARY KEY,
+  tenant_id VARCHAR(100) NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_environments_tenant
+    FOREIGN KEY (tenant_id)
+    REFERENCES tenants(id)
+    ON DELETE CASCADE
+)
