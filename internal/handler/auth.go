@@ -164,6 +164,29 @@ func Signin(db *pgxpool.Pool) http.HandlerFunc {
 	}
 }
 
+func Signout(w http.ResponseWriter, r *http.Request) {
+	// Clearing cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	})
+
+	// Server response
+	response := map[string]string{
+		"status": "signed out",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(response)
+}
+
 func Me(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := r.Context().Value(middleware.UserIDKey).(string)

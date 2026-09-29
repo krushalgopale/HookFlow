@@ -15,6 +15,7 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 	mux.HandleFunc("GET /health", handler.Health)
 	mux.HandleFunc("POST /auth/signup", handler.Signup(db))
 	mux.HandleFunc("POST /auth/signin", handler.Signin(db))
+	mux.HandleFunc("POST /auth/signout", handler.Signout)
 	mux.Handle("GET /auth/me", middleware.Auth(handler.Me(db)))
 	mux.HandleFunc("POST /event", handler.CreateEvent(db))
 	mux.HandleFunc("GET /event/{id}", handler.GetEvent(db))
