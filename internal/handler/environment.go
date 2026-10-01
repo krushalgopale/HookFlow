@@ -77,3 +77,43 @@ func CreateEnvironment(db *pgxpool.Pool) http.HandlerFunc {
 		json.NewEncoder(w).Encode(response)
 	}
 }
+
+func ListEnvronments(db *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Path parameter
+		tenantID := r.PathValue("id")
+
+		// Get user id from request context
+		userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Check Tenant Ownership
+		belongs, err := repository.TenantBelongsToUser(db, r.Context(), tenantID, userID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if !belongs {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
+		// Database Operation
+		environments, err := repository.ListEnvironmentsByTenant(db, r.Context(), tenantID)
+		// Error Handling
+		if err != nil {
+			http.Error(w, "Failed to fetch environments", http.StatusInternalServerError)
+			return
+		}
+
+		// Server Response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		json.NewEncoder(w).Encode(environments)
+	}
+}
