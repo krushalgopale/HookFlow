@@ -31,5 +31,9 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 	mux.Handle("GET /tenants", middleware.Auth(handler.ListTenants(db)))
 	mux.Handle("PATCH /tenant/{id}", middleware.Auth(handler.UpdateTenant(db)))
 	mux.Handle("DELETE /tenant/{id}", middleware.Auth(handler.DeleteTenant(db)))
+	
+	// Environment
+	mux.Handle("POST /tenant/{id}/environment", middleware.Auth(handler.CreateEnvironment(db)))
+
 	return mux
 }
