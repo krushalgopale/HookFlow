@@ -1,0 +1,5 @@
+ALTER TABLE tenants 
+DROP CONSTRAINT fk_tenants_user;
+
+ALTER TABLE tenants
+ALTER COLUMN user_id DROP NOT NULL;
