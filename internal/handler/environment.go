@@ -236,3 +236,48 @@ func UpdateEnvironment(db *pgxpool.Pool) http.HandlerFunc {
 		json.NewEncoder(w).Encode(response)
 	}
 }
+
+func DeleteEnvironment(db *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Path parameter
+		tenantID := r.PathValue("tenant_id")
+		environmentID := r.PathValue("id")
+
+		// Get user Id from request context
+		userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Check tenant ownership
+		belongs, err := repository.TenantBelongsToUser(db, r.Context(), tenantID, userID)
+		if err != nil {
+			http.Error(w, "Failed to check tenant ownership", http.StatusInternalServerError)
+			return
+		}
+
+		if !belongs {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
+		// Database operation
+		err = repository.DeleteEnvironmentByTenant(db, r.Context(), environmentID, tenantID)
+		// Error handling
+		if err != nil {
+			http.Error(w, "Failed to delete environment", http.StatusInternalServerError)
+			return
+		}
+
+		// Server response
+		response := models.EnvironmentResponse{
+			Status: "deleted",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		json.NewEncoder(w).Encode(response)
+	}
+}

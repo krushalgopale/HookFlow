@@ -135,3 +135,26 @@ func UpdateEnvironmentByTenant(
 
 	return nil
 }
+
+func DeleteEnvironmentByTenant(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	environmentID string,
+	tenantID string,
+) error {
+	result, err := db.Exec(
+		ctx,
+		`DELETE FROM environments WHERE id = $1 AND tenant_id = $2`,
+		environmentID,
+		tenantID,
+	)
+	if err != nil {
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+
+	return nil
+}
