@@ -15,7 +15,7 @@ import (
 func CreateEnvironment(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Path parameter for tenantID
-		tenantID := r.PathValue("id")
+		tenantID := r.PathValue("tenant_id")
 
 		// Get user id from request context
 		userID, ok := r.Context().Value(middleware.UserIDKey).(string)
@@ -104,7 +104,12 @@ func GetEnvironment(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Database operation
-		environment, err := repository.GetEnvironmentByTenant(db, r.Context(), environmentID, tenantID)
+		environment, err := repository.GetEnvironmentByTenant(
+			db,
+			r.Context(),
+			environmentID,
+			tenantID,
+		)
 		// Error handling
 		if err != nil {
 			if err == pgx.ErrNoRows {
@@ -126,7 +131,7 @@ func GetEnvironment(db *pgxpool.Pool) http.HandlerFunc {
 func ListEnvronments(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Path parameter
-		tenantID := r.PathValue("id")
+		tenantID := r.PathValue("tenant_id")
 
 		// Get user id from request context
 		userID, ok := r.Context().Value(middleware.UserIDKey).(string)
@@ -160,6 +165,71 @@ func ListEnvronments(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Server Response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
+func UpdateEnvironment(db *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Path parameter
+		tenantID := r.PathValue("tenant_id")
+		environmentID := r.PathValue("id")
+
+		// Get user Id from request context
+		userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Check tenant ownership
+		belongs, err := repository.TenantBelongsToUser(db, r.Context(), tenantID, userID)
+		if err != nil {
+			http.Error(w, "Failed to verify tenant ownership", http.StatusInternalServerError)
+			return
+		}
+
+		if !belongs {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
+		var environment models.Environment
+
+		// JSON validation
+		err = json.NewDecoder(r.Body).Decode(&environment)
+		if err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		if environment.Name == "" {
+			http.Error(w, "Environment name is required", http.StatusBadRequest)
+			return
+		}
+
+		// Database operation
+		err = repository.UpdateEnvironmentByTenant(
+			db,
+			r.Context(),
+			environmentID,
+			tenantID,
+			environment.Name,
+		)
+		// Error handling
+		if err != nil {
+			http.Error(w, "Failed to get updated environment", http.StatusInternalServerError)
+			return
+		}
+
+		// Server response
+		response := models.EnvironmentResponse{
+			Status: "updated",
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 

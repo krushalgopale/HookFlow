@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/krushalgopale/HookFlow/internal/models"
 )
@@ -108,4 +109,29 @@ func ListEnvironmentsByTenant(
 	}
 
 	return environments, nil
+}
+
+func UpdateEnvironmentByTenant(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	envronmentID string,
+	tenantID string,
+	name string,
+) error {
+	result, err := db.Exec(
+		ctx,
+		`UPDATE environments SET NAME = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND 	tenant_id = $3`,
+		name,
+		envronmentID,
+		tenantID,
+	)
+	if err != nil {
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+
+	return nil
 }
