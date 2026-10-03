@@ -41,6 +41,7 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 	
 	// API Key
 	mux.Handle("POST /environment/{env_id}/api-key", middleware.Auth(handler.CreateAPIKey(db)))
+	mux.Handle("GET /environment/{env_id}/api-key/{id}", middleware.Auth(handler.GetAPIKey(db)))
 	mux.Handle("GET /environment/{env_id}/api-keys", middleware.Auth(handler.ListAPIKeys(db)))
 	return mux
 }

@@ -43,6 +43,32 @@ func EnvironmentBelongsToUser(
 	return exists, err
 }
 
+func GetAPIKeyByID(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	apiKeyID string,
+	environmentID string,
+) (models.APIKey, error) {
+	var apiKey models.APIKey
+
+	err := db.QueryRow(
+		ctx,
+		`SELECT id, environment_id, key, created_at FROM api_keys WHERE id = $1 AND environment_id = $2`,
+		apiKeyID,
+		environmentID,
+	).Scan(
+		&apiKey.ID,
+		&apiKey.EnvironmentID,
+		&apiKey.Key,
+		&apiKey.CreatedAt,
+	)
+	if err != nil {
+		return models.APIKey{}, err
+	}
+
+	return apiKey, nil
+}
+
 func ListAPIKeysByEnvironment(
 	db *pgxpool.Pool,
 	ctx context.Context,
