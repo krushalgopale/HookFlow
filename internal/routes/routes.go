@@ -40,6 +40,7 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 	mux.Handle("DELETE /tenant/{tenant_id}/environment/{id}", middleware.Auth(handler.DeleteEnvironment(db)))
 	
 	// API Key
-	mux.Handle("POST /environment/{env_id}/api-keys", middleware.Auth(handler.CreateAPIKey(db)))
+	mux.Handle("POST /environment/{env_id}/api-key", middleware.Auth(handler.CreateAPIKey(db)))
+	mux.Handle("GET /environment/{env_id}/api-keys", middleware.Auth(handler.ListAPIKeys(db)))
 	return mux
 }

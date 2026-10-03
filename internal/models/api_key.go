@@ -19,3 +19,7 @@ type APIKeyResponse struct {
 type ErrRes struct {
 	Error string `json:"error"`
 }
+
+type APIKeyListResponse struct {
+	APIKeys []APIKey `json:"api_keys"`
+}
