@@ -42,17 +42,43 @@ func TenantBelongsToUser(
 	return exists, err
 }
 
+func GetEnvironmentByTenant(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	environmentID string,
+	tenantID string,
+) (models.Environment, error) {
+	var environment models.Environment
+
+	err := db.QueryRow(
+		ctx,
+		`SELECT id, tenant_id, name, created_at, updated_at FROM environments WHERE id = $1 AND tenant_id = $2`,
+		environmentID,
+		tenantID,
+	).Scan(
+		&environment.ID,
+		&environment.TenantID,
+		&environment.Name,
+		&environment.CreatedAt,
+		&environment.UpdatedAt,
+	)
+	if err != nil {
+		return models.Environment{}, err
+	}
+
+	return environment, nil
+}
+
 func ListEnvironmentsByTenant(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	tenantID string,
-) ([]models.Environment, error){
+) ([]models.Environment, error) {
 	rows, err := db.Query(
 		ctx,
 		`SELECT id, tenant_id, name, created_at, updated_at FROM environments WHERE tenant_id = $1`,
 		tenantID,
-		) 
-
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +86,7 @@ func ListEnvironmentsByTenant(
 
 	var environments []models.Environment
 
-		for rows.Next() {
+	for rows.Next() {
 		var environment models.Environment
 
 		err := rows.Scan(
@@ -69,10 +95,9 @@ func ListEnvironmentsByTenant(
 			&environment.Name,
 			&environment.CreatedAt,
 			&environment.UpdatedAt,
-			)
-
+		)
 		if err != nil {
-			return nil, err 
+			return nil, err
 		}
 
 		environments = append(environments, environment)
@@ -83,5 +108,4 @@ func ListEnvironmentsByTenant(
 	}
 
 	return environments, nil
-
 }
