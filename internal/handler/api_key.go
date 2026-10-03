@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -14,6 +15,7 @@ import (
 
 func CreateAPIKey(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Path parameter
 		environmentID := r.PathValue("env_id")
 
 		// Get user Id from request context
@@ -35,12 +37,88 @@ func CreateAPIKey(db *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
+		// JSON validation
+		var request models.CreateAPIKeyRequest
+
+		err = json.NewDecoder(r.Body).Decode(&request)
+		if err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		if request.Name == "" {
+			http.Error(w, "API Key name is required", http.StatusBadRequest)
+			return
+		}
+
+		// Default expiration
+		if request.Expiration == "" {
+			request.Expiration = "never"
+		}
+
+		// Options/Calculate expiration
+		var expiresAt *time.Time
+
+		switch request.Expiration {
+		case "never":
+			expiresAt = nil
+
+		case "1h":
+			t := time.Now().Add(1 * time.Hour)
+			expiresAt = &t
+
+		case "24h":
+			t := time.Now().Add(24 * time.Hour)
+			expiresAt = &t
+
+		case "7d":
+			t := time.Now().Add(7 * 24 * time.Hour)
+			expiresAt = &t
+
+		case "30d":
+			t := time.Now().Add(30 * 24 * time.Hour)
+			expiresAt = &t
+
+		case "custom":
+			if request.ExpiresAt == nil {
+				http.Error(w, "expires_at required for custom expiration", http.StatusBadRequest)
+				return
+			}
+
+			if !request.ExpiresAt.After(time.Now()) {
+				http.Error(
+					w,
+					"expires_at must be a date and time later than the current time",
+					http.StatusBadRequest,
+				)
+				return
+			}
+			expiresAt = request.ExpiresAt
+
+		case "now":
+			t := time.Now()
+			expiresAt = &t
+
+		default:
+			http.Error(w, "Invalid expiration option", http.StatusBadRequest)
+			return
+		}
+
 		// ID and Key Generation
 		apiKeyID := "key_" + uuid.New().String()
 		apiKey := "hf_" + uuid.New().String()
 
 		// Database operation
-		err = repository.SaveAPIKey(db, r.Context(), apiKeyID, environmentID, apiKey)
+		err = repository.SaveAPIKey(
+			db,
+			r.Context(),
+			apiKeyID,
+			environmentID,
+			apiKey,
+			request.Name,
+			expiresAt,
+		)
+		// Error handling
 		if err != nil {
 			http.Error(w, "Failed to create API key", http.StatusInternalServerError)
 			return
@@ -48,12 +126,13 @@ func CreateAPIKey(db *pgxpool.Pool) http.HandlerFunc {
 
 		// Server Response
 		response := models.APIKeyResponse{
-			APIKey: apiKey,
-			Status: "accepted",
+			APIKey:    apiKey,
+			Status:    "accepted",
+			ExpiresAt: expiresAt,
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusCreated)
 
 		json.NewEncoder(w).Encode(response)
 	}

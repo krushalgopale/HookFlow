@@ -2,6 +2,9 @@ package repository
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/krushalgopale/HookFlow/internal/models"
@@ -13,13 +16,21 @@ func SaveAPIKey(
 	apikeyID string,
 	environmentID string,
 	key string,
+	name string,
+	expiresAt *time.Time,
 ) error {
+
+	hash := sha256.Sum256([]byte (key))
+	keyHash := hex.EncodeToString(hash[:])
+
 	_, err := db.Exec(
 		ctx,
-		`INSERT INTO api_keys(id, environment_id, key) VALUES ($1, $2, $3)`,
+		`INSERT INTO api_keys(id, environment_id, name, key, expires_at) VALUES ($1, $2, $3, $4, $5)`,
 		apikeyID,
 		environmentID,
-		key,
+		name,
+		keyHash,
+		expiresAt,
 	)
 
 	return err
@@ -53,14 +64,16 @@ func GetAPIKeyByID(
 
 	err := db.QueryRow(
 		ctx,
-		`SELECT id, environment_id, key, created_at FROM api_keys WHERE id = $1 AND environment_id = $2`,
+		`SELECT id, environment_id, name, created_at, updated_at, expires_at FROM api_keys WHERE id = $1 AND environment_id = $2`,
 		apiKeyID,
 		environmentID,
 	).Scan(
 		&apiKey.ID,
 		&apiKey.EnvironmentID,
-		&apiKey.Key,
+		&apiKey.Name,
 		&apiKey.CreatedAt,
+		&apiKey.UpdatedAt,
+		&apiKey.ExpiresAt,
 	)
 	if err != nil {
 		return models.APIKey{}, err
@@ -76,7 +89,7 @@ func ListAPIKeysByEnvironment(
 ) ([]models.APIKey, error) {
 	rows, err := db.Query(
 		ctx,
-		`SELECT id, environment_id, key, created_at FROM api_keys WHERE environment_id = $1`,
+		`SELECT id, environment_id, name, created_at, updated_at, expires_at FROM api_keys WHERE environment_id = $1`,
 		environmentID,
 	)
 	if err != nil {
@@ -92,8 +105,10 @@ func ListAPIKeysByEnvironment(
 		err := rows.Scan(
 			&apikey.ID,
 			&apikey.EnvironmentID,
-			&apikey.Key,
+			&apikey.Name,
 			&apikey.CreatedAt,
+			&apikey.UpdatedAt,
+			&apikey.ExpiresAt,
 		)
 		if err != nil {
 			return nil, err
