@@ -11,10 +11,14 @@ type Environment struct {
 }
 
 type EnvironmentResponse struct {
-	ID string `json:"id"`
+	ID     string `json:"id"`
 	Status string `json:"status"`
 }
 
 type EnvironmentErrRes struct {
 	Error string `json:"error"`
+}
+
+type EnvironmentListResponse struct {
+	Environments []Environment `json:"tenants"`
 }
