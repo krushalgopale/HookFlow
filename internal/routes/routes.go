@@ -41,8 +41,8 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 	
 	// Event
 	mux.Handle("POST /event", middleware.ApiKeyAuth(db, handler.CreateEvent(db)))
-	mux.Handle("GET /event/{id}", middleware.Auth(handler.GetEvent(db)))
-	mux.Handle("GET /events", middleware.Auth(handler.ListEvents(db)))
+	mux.Handle("GET /environment/{env_id}/event/{id}", middleware.Auth(handler.GetEvent(db)))
+	mux.Handle("GET /environment/{env_id}/events", middleware.Auth(handler.ListEvents(db)))
 
 	return mux
 }

@@ -11,13 +11,15 @@ func SaveEvent(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	eventID string,
+	environmentID string,
 	eventType string,
 	data []byte,
 ) error {
 	_, err := db.Exec(
 		ctx,
-		`INSERT INTO events (id, type, data) VALUES ($1, $2, $3)`,
+		`INSERT INTO events (id, environment_id, type, data) VALUES ($1, $2, $3, $4)`,
 		eventID,
+		environmentID,
 		eventType,
 		data,
 	)
@@ -28,15 +30,17 @@ func GetEvent(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	eventID string,
+	environmentID string,
 ) (*models.Event, error) {
 	var event models.Event
 
 	err := db.QueryRow(
 		ctx,
-		`SELECT id, type, data, created_at FROM events WHERE id = $1`,
+		`SELECT id, environment_id, type, data, created_at FROM events WHERE id = $1 AND environment_id = $2`,
 		eventID,
+		environmentID,
 	).Scan(
-		&event.ID, &event.Type, &event.Data, &event.CreatedAt,
+		&event.ID, &event.EnvironmentID, &event.Type, &event.Data, &event.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -48,15 +52,17 @@ func GetEvent(
 func ListEvents(
 	db *pgxpool.Pool,
 	ctx context.Context,
+	environmentID string,
 	limit int,
 	offset int,
-) ([]models.Event,int, error) {
+) ([]models.Event, int, error) {
 	events := []models.Event{}
 
 	// Database Operation with Pagination
 	rows, err := db.Query(
 		ctx,
-		`SELECT id, type, data, created_at FROM events ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+		`SELECT id, environment_id, type, data, created_at FROM events WHERE environment_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+		environmentID,
 		limit,
 		offset,
 	)
@@ -70,7 +76,7 @@ func ListEvents(
 		var event models.Event
 
 		err := rows.Scan(
-			&event.ID, &event.Type, &event.Data, &event.CreatedAt,
+			&event.ID, &event.EnvironmentID, &event.Type, &event.Data, &event.CreatedAt,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -84,8 +90,7 @@ func ListEvents(
 	err = db.QueryRow(
 		ctx,
 		`SELECT COUNT(*) FROM events`,
-		).Scan(&total)
-
+	).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}

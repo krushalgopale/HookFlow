@@ -1,12 +1,15 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type Event struct {
-	ID        string      `json:"id"`
-	Type      string      `json:"type"`
-	Data      interface{} `json:"data"`
-	CreatedAt time.Time   `json:"created_at"`
+	ID            string    `json:"id"`
+	EnvironmentID string    `json:"environment_id"`
+	Type          string    `json:"type"`
+	Data          any       `json:"data"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type EventResponse struct {
