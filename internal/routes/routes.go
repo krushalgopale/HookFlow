@@ -20,11 +20,6 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 	mux.HandleFunc("POST /auth/signout", handler.Signout)
 	mux.Handle("GET /auth/me", middleware.Auth(handler.Me(db)))
 
-	// Event
-	mux.HandleFunc("POST /event", handler.CreateEvent(db))
-	mux.HandleFunc("GET /event/{id}", handler.GetEvent(db))
-	mux.HandleFunc("GET /events", handler.ListEvents(db))
-
 	// Tenant
 	mux.Handle("POST /tenant", middleware.Auth(handler.CreateTenant(db)))
 	mux.Handle("GET /tenant/{id}", middleware.Auth(handler.GetTenant(db)))
@@ -43,5 +38,11 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 	mux.Handle("POST /environment/{env_id}/api-key", middleware.Auth(handler.CreateAPIKey(db)))
 	mux.Handle("GET /environment/{env_id}/api-key/{id}", middleware.Auth(handler.GetAPIKey(db)))
 	mux.Handle("GET /environment/{env_id}/api-keys", middleware.Auth(handler.ListAPIKeys(db)))
+	
+	// Event
+	mux.Handle("POST /event", middleware.ApiKeyAuth(db, handler.CreateEvent(db)))
+	mux.Handle("GET /event/{id}", middleware.Auth(handler.GetEvent(db)))
+	mux.Handle("GET /events", middleware.Auth(handler.ListEvents(db)))
+
 	return mux
 }
