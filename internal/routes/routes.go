@@ -44,5 +44,11 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 	mux.Handle("GET /environment/{env_id}/event/{id}", middleware.Auth(handler.GetEvent(db)))
 	mux.Handle("GET /environment/{env_id}/events", middleware.Auth(handler.ListEvents(db)))
 
+	// Destination
+	mux.Handle("POST /environment/{env_id}/destination", middleware.Auth(handler.CreateDestination(db)))
+	mux.Handle("GET /environment/{env_id}/destination/{id}", middleware.Auth(handler.GetDestination(db)))
+	mux.Handle("GET /environment/{env_id}/destinations", middleware.Auth(handler.ListDestinations(db)))
+	mux.Handle("PATCH /environment/{env_id}/destination/{id}", middleware.Auth(handler.UpdateDestination(db)))
+	mux.Handle("DELETE /environment/{env_id}/destination/{id}", middleware.Auth(handler.DeleteDestination(db)))
 	return mux
 }
