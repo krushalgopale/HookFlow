@@ -43,7 +43,7 @@ func TenantBelongsToUser(
 	return exists, err
 }
 
-func GetEnvironmentByTenant(
+func GetEnvironmentByID(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	environmentID string,
@@ -70,7 +70,7 @@ func GetEnvironmentByTenant(
 	return environment, nil
 }
 
-func ListEnvironmentsByTenant(
+func ListEnvironments(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	tenantID string,
@@ -111,7 +111,7 @@ func ListEnvironmentsByTenant(
 	return environments, nil
 }
 
-func UpdateEnvironmentByTenant(
+func UpdateEnvironmentByID(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	envronmentID string,
@@ -136,7 +136,7 @@ func UpdateEnvironmentByTenant(
 	return nil
 }
 
-func DeleteEnvironmentByTenant(
+func DeleteEnvironmentByID(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	environmentID string,

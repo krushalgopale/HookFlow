@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/krushalgopale/HookFlow/internal/models"
 )
@@ -96,7 +97,7 @@ func ListDestinations(
 	return destinations, nil
 }
 
-func UpdateDestination(
+func UpdateDestinationByID(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	destinationID string,
@@ -104,7 +105,7 @@ func UpdateDestination(
 	name string,
 	url string,
 ) error {
-	_, err := db.Exec(
+	result, err := db.Exec(
 		ctx,
 		`UPDATE destinations SET name = $1, url = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND environment_id = $4`,
 		name,
@@ -112,22 +113,36 @@ func UpdateDestination(
 		destinationID,
 		environmentID,
 	)
+	if err != nil {
+		return err
+	}
 
-	return err
+	if result.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+
+	return nil
 }
 
-func DeleteDestination(
+func DeleteDestinationByID(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	destinationID string,
 	environmentID string,
 ) error {
-	_, err := db.Exec(
+	result, err := db.Exec(
 		ctx,
 		`DELETE FROM destinations WHERE id = $1 AND environment_id = $2`,
 		destinationID,
 		environmentID,
 	)
+	if err != nil {
+		return err
+	}
 
-	return err
+	if result.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+
+	return nil
 }

@@ -208,7 +208,7 @@ func ListAPIKeys(db *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
-		ApiKeys, err := repository.ListAPIKeysByEnvironment(db, r.Context(), environmentID)
+		ApiKeys, err := repository.ListAPIKeys(db, r.Context(), environmentID)
 		if err != nil {
 			http.Error(w, "Failed to fetch api keys", http.StatusInternalServerError)
 			return

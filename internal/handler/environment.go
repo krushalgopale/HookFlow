@@ -104,7 +104,7 @@ func GetEnvironment(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Database operation
-		environment, err := repository.GetEnvironmentByTenant(
+		environment, err := repository.GetEnvironmentByID(
 			db,
 			r.Context(),
 			environmentID,
@@ -153,7 +153,7 @@ func ListEnvronments(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Database Operation
-		environments, err := repository.ListEnvironmentsByTenant(db, r.Context(), tenantID)
+		environments, err := repository.ListEnvironments(db, r.Context(), tenantID)
 		// Error Handling
 		if err != nil {
 			http.Error(w, "Failed to fetch environments", http.StatusInternalServerError)
@@ -212,7 +212,7 @@ func UpdateEnvironment(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Database operation
-		err = repository.UpdateEnvironmentByTenant(
+		err = repository.UpdateEnvironmentByID(
 			db,
 			r.Context(),
 			environmentID,
@@ -221,7 +221,12 @@ func UpdateEnvironment(db *pgxpool.Pool) http.HandlerFunc {
 		)
 		// Error handling
 		if err != nil {
-			http.Error(w, "Failed to get updated environment", http.StatusInternalServerError)
+			if err == pgx.ErrNoRows {
+				http.Error(w, "Environment not found", http.StatusNotFound)
+				return
+			}
+
+			http.Error(w, "Failed to update environment", http.StatusInternalServerError)
 			return
 		}
 
@@ -263,9 +268,14 @@ func DeleteEnvironment(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Database operation
-		err = repository.DeleteEnvironmentByTenant(db, r.Context(), environmentID, tenantID)
+		err = repository.DeleteEnvironmentByID(db, r.Context(), environmentID, tenantID)
 		// Error handling
 		if err != nil {
+			if err == pgx.ErrNoRows {
+				http.Error(w, "Environment not found", http.StatusNotFound)
+				return
+			}
+
 			http.Error(w, "Failed to delete environment", http.StatusInternalServerError)
 			return
 		}

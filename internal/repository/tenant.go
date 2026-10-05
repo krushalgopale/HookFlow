@@ -26,7 +26,7 @@ func SaveTenant(
 	return err
 }
 
-func GetTenant(
+func GetTenantByID(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	tenantID string,
@@ -89,7 +89,7 @@ func ListTenants(
 	return tenants, nil
 }
 
-func UpdateTenant(
+func UpdateTenantByID(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	tenantID string,
@@ -114,7 +114,7 @@ func UpdateTenant(
 	return nil
 }
 
-func DeleteTenant(
+func DeleteTenantByID(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	tenantID string,

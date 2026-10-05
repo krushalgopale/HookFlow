@@ -78,7 +78,7 @@ func GetTenant(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Database Operation
-		tenant, err := repository.GetTenant(db, r.Context(), tenantID, userID)
+		tenant, err := repository.GetTenantByID(db, r.Context(), tenantID, userID)
 		if err != nil {
 
 			if err == pgx.ErrNoRows {
@@ -158,7 +158,7 @@ func UpdateTenant(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Database Operation
-		err = repository.UpdateTenant(db, r.Context(), tenantID, userID, tenant.Name)
+		err = repository.UpdateTenantByID(db, r.Context(), tenantID, userID, tenant.Name)
 		// Error Handling
 		if err != nil {
 			if err == pgx.ErrNoRows {
@@ -195,7 +195,7 @@ func DeleteTenant(db *pgxpool.Pool) http.HandlerFunc {
 		tenantID := r.PathValue("id")
 
 		// Database Operation
-		err := repository.DeleteTenant(db, r.Context(), tenantID, userID)
+		err := repository.DeleteTenantByID(db, r.Context(), tenantID, userID)
 		// Error Handling
 		if err != nil {
 			if err == pgx.ErrNoRows {

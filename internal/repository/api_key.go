@@ -81,7 +81,7 @@ func GetAPIKeyByID(
 	return apiKey, nil
 }
 
-func ListAPIKeysByEnvironment(
+func ListAPIKeys(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	environmentID string,
@@ -121,31 +121,4 @@ func ListAPIKeysByEnvironment(
 
 	}
 	return apiKeys, nil
-}
-
-func GetAPIKeyByKey(
-	db *pgxpool.Pool,
-	ctx context.Context,
-	keyHash string,
-) (*models.APIKey, error) {
-	var apiKey models.APIKey
-
-	err := db.QueryRow(
-		ctx,
-		`SELECT id, environment_id, name, created_at, updated_at, expires_at FROM api_keys WHERE key = $1`,
-		keyHash,
-	).Scan(
-		&apiKey.ID,
-		&apiKey.EnvironmentID,
-		&apiKey.Name,
-		&apiKey.CreatedAt,
-		&apiKey.UpdatedAt,
-		&apiKey.ExpiresAt,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &apiKey, nil
 }
