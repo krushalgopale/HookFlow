@@ -26,6 +26,24 @@ func SaveEvent(
 	return err
 }
 
+func EventBelongsToUser(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	eventID string,
+	userID string,
+) (bool, error) {
+	var exists bool
+	err := db.QueryRow(
+		ctx,
+		`SELECT EXISTS (SELECT 1 FROM events e INNER JOIN environments env ON e.environment_id = env.id
+		INNER JOIN tenants t ON env.tenant_id = t.id WHERE e.id = $1 AND t.user_id = $2)`,
+		eventID,
+		userID,
+	).Scan(&exists)
+
+	return exists, err
+}
+
 func GetEvent(
 	db *pgxpool.Pool,
 	ctx context.Context,
