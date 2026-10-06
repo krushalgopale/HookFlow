@@ -69,6 +69,24 @@ func CreateEvent(db *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
+		// Get destinations for the environment
+		destinations, err := repository.ListDestinations(db, r.Context(), environmentID)
+		if err != nil {
+			http.Error(w, "Failed to fetch destinations", http.StatusInternalServerError)
+			return
+		}
+
+		// Create a delivery for each destination
+		for _, destination := range destinations {
+			deliveryID := "del_" + uuid.New().String()
+
+			err := repository.SaveDelivery(db, r.Context(), deliveryID, eventID, destination.ID)
+			if err != nil {
+				http.Error(w, "Failed to create delivery", http.StatusInternalServerError)
+				return
+			}
+		}
+
 		// Server Response
 		response := models.EventResponse{
 			ID:     eventID,
