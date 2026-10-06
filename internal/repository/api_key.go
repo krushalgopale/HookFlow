@@ -35,24 +35,6 @@ func SaveAPIKey(
 	return err
 }
 
-func EnvironmentBelongsToUser(
-	db *pgxpool.Pool,
-	ctx context.Context,
-	environmentID string,
-	userID string,
-) (bool, error) {
-	var exists bool
-
-	err := db.QueryRow(
-		ctx,
-		`SELECT EXISTS (SELECT 1 FROM environments e INNER JOIN tenants t ON e.tenant_id = t.id WHERE e.id = $1 AND t.user_id = $2)`,
-		environmentID,
-		userID,
-	).Scan(&exists)
-
-	return exists, err
-}
-
 func GetAPIKeyByID(
 	db *pgxpool.Pool,
 	ctx context.Context,
