@@ -26,6 +26,24 @@ func SaveTenant(
 	return err
 }
 
+func TenantBelongsToUser(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	tenantID string,
+	userID string,
+) (bool, error) {
+	var exists bool
+
+	err := db.QueryRow(
+		ctx,
+		`SELECT EXISTS (SELECT 1 FROM tenants WHERE id = $1 AND user_id = $2)`,
+		tenantID,
+		userID,
+	).Scan(&exists)
+
+	return exists, err
+}
+
 func GetTenantByID(
 	db *pgxpool.Pool,
 	ctx context.Context,

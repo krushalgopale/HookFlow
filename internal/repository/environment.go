@@ -25,18 +25,18 @@ func SaveEnvironment(
 	return err
 }
 
-func TenantBelongsToUser(
+func EnvironmentBelongsToUser(
 	db *pgxpool.Pool,
 	ctx context.Context,
-	tenantID string,
+	environmentID string,
 	userID string,
 ) (bool, error) {
 	var exists bool
 
 	err := db.QueryRow(
 		ctx,
-		`SELECT EXISTS (SELECT 1 FROM tenants WHERE id = $1 AND user_id = $2)`,
-		tenantID,
+		`SELECT EXISTS (SELECT 1 FROM environments e INNER JOIN tenants t ON e.tenant_id = t.id WHERE e.id = $1 AND t.user_id = $2)`,
+		environmentID,
 		userID,
 	).Scan(&exists)
 
