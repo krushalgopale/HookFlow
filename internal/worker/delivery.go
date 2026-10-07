@@ -14,6 +14,8 @@ import (
 	"github.com/krushalgopale/HookFlow/internal/repository"
 )
 
+const deliveryTimeout = 10 * time.Second
+
 func ExecuteDelivery(
 	db *pgxpool.Pool,
 	ctx context.Context,
@@ -46,7 +48,7 @@ func ExecuteDelivery(
 
 	// Send the event data to the destination url
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: deliveryTimeout,
 	}
 
 	response, err := client.Post(
