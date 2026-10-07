@@ -207,13 +207,14 @@ func GetDeliveryForExecution(
 	var delivery models.Delivery
 	err := db.QueryRow(
 		ctx,
-		`SELECT id, event_id, destination_id, status FROM deliveries WHERE id = $1`,
+		`SELECT id, event_id, destination_id, status, max_attempts FROM deliveries WHERE id = $1`,
 		deliveryID,
 	).Scan(
 		&delivery.ID,
 		&delivery.EventID,
 		&delivery.DestinationID,
 		&delivery.Status,
+		&delivery.MaxAttempts,
 	)
 	if err != nil {
 		return models.Delivery{}, err

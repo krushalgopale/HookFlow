@@ -16,6 +16,7 @@ func ExecuteDelivery(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	deliveryID string,
+	attempt int,
 ) error {
 	// Get the delivery and find its event and destination IDs
 	delivery, err := repository.GetDeliveryForExecution(db, ctx, deliveryID)
@@ -112,6 +113,17 @@ func ExecuteDelivery(
 	)
 	if err != nil {
 		return err
+	}
+
+	if attempt < delivery.MaxAttempts {
+		go ExecuteDelivery(
+			db,
+			ctx, 
+			delivery.ID,
+			attempt + 1,
+			)
+
+		return nil
 	}
 
 	return fmt.Errorf("%s", deliveryError)

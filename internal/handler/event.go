@@ -92,6 +92,7 @@ func CreateEvent(db *pgxpool.Pool) http.HandlerFunc {
 				db,
 				context.Background(),
 				deliveryID,
+				1,
 				)
 		}
 
