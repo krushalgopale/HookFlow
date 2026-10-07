@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/krushalgopale/HookFlow/internal/models"
@@ -113,4 +114,35 @@ func ListEvents(
 		return nil, 0, err
 	}
 	return events, total, nil
+}
+
+func GetEventForDelivery(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	eventID string,
+) (models.Event, error) {
+	var event models.Event
+	var data []byte
+
+	err := db.QueryRow(
+		ctx,
+		`SELECT id, environment_id, type, data, created_at FROM events WHERE ID = $1`,
+		eventID,
+	).Scan(
+		&event.ID,
+		&event.EnvironmentID,
+		&event.Type,
+		&data,
+		&event.CreatedAt,
+	)
+	if err != nil {
+		return models.Event{}, err
+	}
+
+	err = json.Unmarshal(data, &event.Data)
+	if err != nil {
+		return models.Event{}, err
+	}
+
+	return event, nil
 }

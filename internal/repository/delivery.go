@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"log"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -175,16 +176,16 @@ func UpdateDeliveryResults(
 	ctx context.Context,
 	deliveryID string,
 	status string,
-	reponseStatus *int,
-	reponseBody *string,
+	responseStatus *int,
+	responseBody *string,
 	deliveryError *string,
 ) error {
 	result, err := db.Exec(
 		ctx,
-		`UPDATE delveries SET status = $1, response_status = $2, response_body = $3, error = $4, attempt_count = attempt_count + 1, updated_at = CURRENT_TIMESTAMP WHERE id = $5`,
+		`UPDATE deliveries SET status = $1, response_status = $2, response_body = $3, error = $4, attempt_count = attempt_count + 1, updated_at = CURRENT_TIMESTAMP WHERE id = $5`,
 		status,
-		reponseStatus,
-		reponseBody,
+		responseStatus,
+		responseBody,
 		deliveryError,
 		deliveryID,
 	)
@@ -197,4 +198,27 @@ func UpdateDeliveryResults(
 	}
 
 	return nil
+}
+
+func GetDeliveryForExecution(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	deliveryID string,
+) (models.Delivery, error) {
+	var delivery models.Delivery
+	err := db.QueryRow(
+		ctx,
+		`SELECT id, event_id, destination_id, status FROM deliveries WHERE id = $1`,
+		deliveryID,
+	).Scan(
+		&delivery.ID,
+		&delivery.EventID,
+		&delivery.DestinationID,
+		&delivery.Status,
+	)
+	if err != nil {
+		return models.Delivery{}, err
+	}
+
+	return delivery, nil
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"github.com/krushalgopale/HookFlow/internal/middleware"
 	"github.com/krushalgopale/HookFlow/internal/models"
 	"github.com/krushalgopale/HookFlow/internal/repository"
+	"github.com/krushalgopale/HookFlow/internal/worker"
 )
 
 func CreateEvent(db *pgxpool.Pool) http.HandlerFunc {
@@ -85,6 +87,12 @@ func CreateEvent(db *pgxpool.Pool) http.HandlerFunc {
 				http.Error(w, "Failed to create delivery", http.StatusInternalServerError)
 				return
 			}
+
+			go worker.ExecuteDelivery(
+				db,
+				context.Background(),
+				deliveryID,
+				)
 		}
 
 		// Server Response

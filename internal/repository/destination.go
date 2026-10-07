@@ -146,3 +146,28 @@ func DeleteDestinationByID(
 
 	return nil
 }
+
+func GetDestinationForDelivery(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	destinationID string,
+) (models.Destination, error) {
+	var destination models.Destination
+	err := db.QueryRow(
+		ctx,
+		`SELECT id, environment_id, name, url, created_at, updated_at FROM destinations WHERE id = $1`,
+		destinationID,
+	).Scan(
+		&destination.ID,
+		&destination.EnvironmentID,
+		&destination.Name,
+		&destination.URL,
+		&destination.CreatedAt,
+		&destination.UpdatedAt,
+	)
+	if err != nil {
+		return models.Destination{}, err
+	}
+
+	return destination, nil
+}
