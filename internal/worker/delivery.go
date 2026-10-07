@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -58,7 +59,8 @@ func ExecuteDelivery(
 		// Store the time when the next retry should happen
 		if attempt < delivery.MaxAttempts {
 			delay := time.Duration(1<<uint(attempt-1)) * time.Second
-			next := time.Now().Add(delay)
+			jitter := time.Duration(rand.Float64() * float64(time.Second))
+			next := time.Now().Add(delay + jitter)
 			nextAttemptAt = &next
 		}
 
@@ -160,7 +162,8 @@ func ExecuteDelivery(
 		// Store the time when the next retry should happen
 		if attempt < delivery.MaxAttempts {
 			delay := time.Duration(1<<uint(attempt-1)) * time.Second
-			next := time.Now().Add(delay)
+			jitter := time.Duration(rand.Float64() * float64(time.Second))
+			next := time.Now().Add(delay + jitter)
 			nextAttemptAt = &next
 		}
 
