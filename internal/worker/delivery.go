@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/krushalgopale/HookFlow/internal/repository"
@@ -52,6 +53,15 @@ func ExecuteDelivery(
 
 		deliveryError := err.Error()
 
+		var nextAttemptAt *time.Time
+
+		// Store the time when the next retry should happen
+		if attempt < delivery.MaxAttempts {
+			delay := time.Duration(1<<uint(attempt-1)) * time.Second
+			next := time.Now().Add(delay)
+			nextAttemptAt = &next
+		}
+
 		// Update delivery as failed because no HTTP response was recieved
 		updateErr := repository.UpdateDeliveryResults(
 			db,
@@ -61,9 +71,24 @@ func ExecuteDelivery(
 			nil,
 			nil,
 			&deliveryError,
+			nextAttemptAt,
 		)
 		if updateErr != nil {
 			return updateErr
+		}
+
+		// Retry if more attempts are available
+		if attempt < delivery.MaxAttempts {
+			if nextAttemptAt != nil {
+				time.Sleep(time.Until(*nextAttemptAt))
+			}
+
+			return ExecuteDelivery(
+				db,
+				ctx,
+				delivery.ID,
+				attempt+1,
+			)
 		}
 
 		return err
@@ -79,7 +104,7 @@ func ExecuteDelivery(
 	}
 
 	// Convert the response body from bytes to string
-	responseBodystring := string(responseBody)
+	responseBodyString := string(responseBody)
 
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 
@@ -90,7 +115,8 @@ func ExecuteDelivery(
 			delivery.ID,
 			"success",
 			&response.StatusCode,
-			&responseBodystring,
+			&responseBodyString,
+			nil,
 			nil,
 		)
 		if err != nil {
@@ -101,29 +127,41 @@ func ExecuteDelivery(
 
 	deliveryError := fmt.Sprintf("destination returned status %d", response.StatusCode)
 
-	// Update delivery when the HTTP response is failed
+	var nextAttemptAt *time.Time
+
+	// Store the time when the next retry should happen
+	if attempt < delivery.MaxAttempts {
+		delay := time.Duration(1<<uint(attempt-1)) * time.Second
+		next := time.Now().Add(delay)
+		nextAttemptAt = &next
+	}
+
+	// Update delivery when the destination HTTP response is failed
 	err = repository.UpdateDeliveryResults(
 		db,
 		ctx,
 		delivery.ID,
 		"failed",
 		&response.StatusCode,
-		&responseBodystring,
+		&responseBodyString,
 		&deliveryError,
+		nextAttemptAt,
 	)
 	if err != nil {
 		return err
 	}
 
+	// Retry if more attempts are available
 	if attempt < delivery.MaxAttempts {
-		go ExecuteDelivery(
+		if nextAttemptAt != nil {
+			time.Sleep(time.Until(*nextAttemptAt))
+		}
+		return ExecuteDelivery(
 			db,
-			ctx, 
+			ctx,
 			delivery.ID,
-			attempt + 1,
-			)
-
-		return nil
+			attempt+1,
+		)
 	}
 
 	return fmt.Errorf("%s", deliveryError)
