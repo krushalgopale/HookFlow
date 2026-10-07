@@ -45,7 +45,11 @@ func ExecuteDelivery(
 	}
 
 	// Send the event data to the destination url
-	response, err := http.Post(
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	response, err := client.Post(
 		destination.URL,
 		"application/json",
 		bytes.NewBuffer(payload),
