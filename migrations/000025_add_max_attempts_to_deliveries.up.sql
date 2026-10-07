@@ -1,0 +1,2 @@
+ALTER TABLE deliveries
+ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 3;
