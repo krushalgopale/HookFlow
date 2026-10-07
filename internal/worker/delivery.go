@@ -106,6 +106,7 @@ func ExecuteDelivery(
 	// Convert the response body from bytes to string
 	responseBodyString := string(responseBody)
 
+	// 2xx Sucess
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 
 		// Update successful delivery result
@@ -125,44 +126,73 @@ func ExecuteDelivery(
 		return nil
 	}
 
-	deliveryError := fmt.Sprintf("destination returned status %d", response.StatusCode)
+	// 4xx Client Error
+	if response.StatusCode >= 400 && response.StatusCode < 500 {
 
-	var nextAttemptAt *time.Time
+		deliveryError := fmt.Sprintf(
+			"destination returned status %d",
+			response.StatusCode,
+		)
 
-	// Store the time when the next retry should happen
-	if attempt < delivery.MaxAttempts {
-		delay := time.Duration(1<<uint(attempt-1)) * time.Second
-		next := time.Now().Add(delay)
-		nextAttemptAt = &next
-	}
-
-	// Update delivery when the destination HTTP response is failed
-	err = repository.UpdateDeliveryResults(
-		db,
-		ctx,
-		delivery.ID,
-		"failed",
-		&response.StatusCode,
-		&responseBodyString,
-		&deliveryError,
-		nextAttemptAt,
-	)
-	if err != nil {
-		return err
-	}
-
-	// Retry if more attempts are available
-	if attempt < delivery.MaxAttempts {
-		if nextAttemptAt != nil {
-			time.Sleep(time.Until(*nextAttemptAt))
-		}
-		return ExecuteDelivery(
+		err := repository.UpdateDeliveryResults(
 			db,
 			ctx,
 			delivery.ID,
-			attempt+1,
+			"failed",
+			&response.StatusCode,
+			&responseBodyString,
+			&deliveryError,
+			nil,
 		)
+		if err != nil {
+			return err
+		}
+
+		return fmt.Errorf("%s", deliveryError)
 	}
 
-	return fmt.Errorf("%s", deliveryError)
+	// 5xx Server Error
+	if response.StatusCode >= 500 && response.StatusCode < 600 {
+		deliveryError := fmt.Sprintf("destination returned status %d", response.StatusCode)
+
+		var nextAttemptAt *time.Time
+
+		// Store the time when the next retry should happen
+		if attempt < delivery.MaxAttempts {
+			delay := time.Duration(1<<uint(attempt-1)) * time.Second
+			next := time.Now().Add(delay)
+			nextAttemptAt = &next
+		}
+
+		// Update delivery when the destination HTTP response is failed
+		err = repository.UpdateDeliveryResults(
+			db,
+			ctx,
+			delivery.ID,
+			"failed",
+			&response.StatusCode,
+			&responseBodyString,
+			&deliveryError,
+			nextAttemptAt,
+		)
+		if err != nil {
+			return err
+		}
+
+		// Retry if more attempts are available
+		if attempt < delivery.MaxAttempts {
+			if nextAttemptAt != nil {
+				time.Sleep(time.Until(*nextAttemptAt))
+			}
+			return ExecuteDelivery(
+				db,
+				ctx,
+				delivery.ID,
+				attempt+1,
+			)
+		}
+
+		return fmt.Errorf("%s", deliveryError)
+	}
+	return nil
 }
