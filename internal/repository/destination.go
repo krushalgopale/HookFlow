@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,13 +18,24 @@ func SaveDestination(
 	name string,
 	url string,
 ) error {
-	_, err := db.Exec(
+	// Generate a cryptographically secure 32-byte signing secret
+	secretBytes := make([]byte, 32)
+
+	_, err := rand.Read(secretBytes)
+	if err != nil {
+		return err
+	}
+
+	signingSecret := hex.EncodeToString(secretBytes)
+
+	_, err = db.Exec(
 		ctx,
-		`INSERT INTO destinations (id, environment_id, name, url) VALUES ($1, $2, $3, $4)`,
+		`INSERT INTO destinations (id, environment_id, name, url, signing_secret) VALUES ($1, $2, $3, $4,$5)`,
 		destinationID,
 		environmentID,
 		name,
 		url,
+		signingSecret,
 	)
 
 	return err
@@ -155,13 +168,14 @@ func GetDestinationForDelivery(
 	var destination models.Destination
 	err := db.QueryRow(
 		ctx,
-		`SELECT id, environment_id, name, url, created_at, updated_at FROM destinations WHERE id = $1`,
+		`SELECT id, environment_id, name, url, signing_secret, created_at, updated_at FROM destinations WHERE id = $1`,
 		destinationID,
 	).Scan(
 		&destination.ID,
 		&destination.EnvironmentID,
 		&destination.Name,
 		&destination.URL,
+		&destination.SigningSecret,
 		&destination.CreatedAt,
 		&destination.UpdatedAt,
 	)

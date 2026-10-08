@@ -3,6 +3,9 @@ package worker
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -47,6 +50,11 @@ func ExecuteDelivery(
 		return err
 	}
 
+	mac := hmac.New(sha256.New, []byte(destination.SigningSecret))
+	mac.Write(payload)
+
+	signature := hex.EncodeToString(mac.Sum(nil))
+
 	// Set response waiting time
 	client := &http.Client{
 		Timeout: deliveryTimeout,
@@ -67,6 +75,7 @@ func ExecuteDelivery(
 	request.Header.Set("X-HookFlow-Delivery-ID", delivery.ID)
 	request.Header.Set("X-HookFlow-Event-ID", delivery.EventID)
 	request.Header.Set("X-HookFlow-Environment-ID", event.EnvironmentID)
+	request.Header.Set("X-HookFlow-Signature","sha256="+signature)
 
 	response, err := client.Do(request)
 	if err != nil {

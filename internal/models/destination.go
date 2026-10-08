@@ -7,6 +7,7 @@ type Destination struct {
 	EnvironmentID string    `json:"environment_id"`
 	Name          string    `json:"name"`
 	URL           string    `json:"url"`
+	SigningSecret string    `json:"-"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }
