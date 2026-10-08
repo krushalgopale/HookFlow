@@ -107,7 +107,7 @@ func ExecuteDelivery(
 	defer response.Body.Close()
 
 	// Read response body returned by the destination
-	responseBody, err := io.ReadAll(response.Body)
+	responseBody, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
 	if err != nil {
 		return err
 	}
