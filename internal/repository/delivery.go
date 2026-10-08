@@ -9,6 +9,7 @@ import (
 	"github.com/krushalgopale/HookFlow/internal/models"
 )
 
+// Deliveries
 func SaveDelivery(
 	db *pgxpool.Pool,
 	ctx context.Context,
@@ -225,4 +226,29 @@ func GetDeliveryForExecution(
 	}
 
 	return delivery, nil
+}
+
+// Delivery Attempts
+
+func SaveDeliveryAttempt(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	attempt models.DeliveryAttempt,
+) error {
+	_, err := db.Exec(
+		ctx,
+		`INSERT INTO delivery_attempts (id, delivery_id, attempt_number, status, response_status, response_body, error) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		attempt.ID,
+		attempt.DeliveryID,
+		attempt.AttemptNmuber,
+		attempt.Status,
+		attempt.ResponseStatus,
+		attempt.ResponseBody,
+		attempt.Error,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

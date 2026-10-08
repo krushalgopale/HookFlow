@@ -20,6 +20,17 @@ type Delivery struct {
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
+type DeliveryAttempt struct {
+	ID             string    `json:"id"`
+	DeliveryID     string    `json:"delivery_id"`
+	AttemptNmuber  int       `json:"attempt_number"`
+	Status         string    `json:"status"`
+	ResponseStatus *int      `json:"response_status,omitempty"`
+	ResponseBody   *string   `json:"response_body,omitempty"`
+	Error          *string   `json:"error,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
 type DeliveryListItem struct {
 	EventType string    `json:"event_type"`
 	Status    string    `json:"status"`

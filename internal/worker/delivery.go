@@ -14,7 +14,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/krushalgopale/HookFlow/internal/models"
 	"github.com/krushalgopale/HookFlow/internal/repository"
 )
 
@@ -75,12 +77,28 @@ func ExecuteDelivery(
 	request.Header.Set("X-HookFlow-Delivery-ID", delivery.ID)
 	request.Header.Set("X-HookFlow-Event-ID", delivery.EventID)
 	request.Header.Set("X-HookFlow-Environment-ID", event.EnvironmentID)
-	request.Header.Set("X-HookFlow-Signature","sha256="+signature)
+	request.Header.Set("X-HookFlow-Signature", "sha256="+signature)
 
 	response, err := client.Do(request)
 	if err != nil {
 
 		deliveryError := err.Error()
+
+		// Save each delivery attempts
+		attemptRecord := models.DeliveryAttempt{
+			ID:             "att_" + uuid.New().String(),
+			DeliveryID:     delivery.ID,
+			AttemptNmuber:  attempt,
+			Status:         "failed",
+			ResponseStatus: nil,
+			ResponseBody:   nil,
+			Error:          &deliveryError,
+		}
+
+		err = repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
+		if err != nil {
+			return err
+		}
 
 		var nextAttemptAt *time.Time
 
@@ -139,6 +157,22 @@ func ExecuteDelivery(
 	// 2xx Sucess
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 
+		// Save each delivery attempts
+		attemptRecord := models.DeliveryAttempt{
+			ID:             "att_" + uuid.New().String(),
+			DeliveryID:     delivery.ID,
+			AttemptNmuber:  attempt,
+			Status:         "success",
+			ResponseStatus: &response.StatusCode,
+			ResponseBody:   &responseBodyString,
+			Error:          nil,
+		}
+
+		err = repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
+		if err != nil {
+			return err
+		}
+
 		// Update successful delivery result
 		err := repository.UpdateDeliveryResults(
 			db,
@@ -165,6 +199,22 @@ func ExecuteDelivery(
 			response.StatusCode,
 		)
 
+		// Save each delivery attempts
+		attemptRecord := models.DeliveryAttempt{
+			ID:             "att_" + uuid.New().String(),
+			DeliveryID:     delivery.ID,
+			AttemptNmuber:  attempt,
+			Status:         "failed",
+			ResponseStatus: &response.StatusCode,
+			ResponseBody:   &responseBodyString,
+			Error:          &deliveryError,
+		}
+
+		err = repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
+		if err != nil {
+			return err
+		}
+
 		err := repository.UpdateDeliveryResults(
 			db,
 			ctx,
@@ -185,6 +235,22 @@ func ExecuteDelivery(
 	// 429 too many requests
 	if response.StatusCode == http.StatusTooManyRequests {
 		deliveryError := fmt.Sprintf("destination returned status %d", response.StatusCode)
+
+		// Save each delivery attempts
+		attemptRecord := models.DeliveryAttempt{
+			ID:             "att_" + uuid.New().String(),
+			DeliveryID:     delivery.ID,
+			AttemptNmuber:  attempt,
+			Status:         "failed",
+			ResponseStatus: &response.StatusCode,
+			ResponseBody:   &responseBodyString,
+			Error:          &deliveryError,
+		}
+
+		err = repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
+		if err != nil {
+			return err
+		}
 
 		var nextAttemptAt *time.Time
 
@@ -253,6 +319,22 @@ func ExecuteDelivery(
 	// 5xx Server Error
 	if response.StatusCode >= 500 && response.StatusCode < 600 {
 		deliveryError := fmt.Sprintf("destination returned status %d", response.StatusCode)
+
+		// Save each delivery attempts
+		attemptRecord := models.DeliveryAttempt{
+			ID:             "att_" + uuid.New().String(),
+			DeliveryID:     delivery.ID,
+			AttemptNmuber:  attempt,
+			Status:         "failed",
+			ResponseStatus: &response.StatusCode,
+			ResponseBody:   &responseBodyString,
+			Error:          &deliveryError,
+		}
+
+		err = repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
+		if err != nil {
+			return err
+		}
 
 		var nextAttemptAt *time.Time
 
