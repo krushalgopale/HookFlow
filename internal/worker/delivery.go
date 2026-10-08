@@ -8,6 +8,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -135,7 +136,8 @@ func ExecuteDelivery(
 	}
 
 	// 4xx Client Error
-	if response.StatusCode >= 400 && response.StatusCode < 500 {
+	if response.StatusCode >= 400 && response.StatusCode < 500 &&
+		response.StatusCode != http.StatusTooManyRequests {
 
 		deliveryError := fmt.Sprintf(
 			"destination returned status %d",
@@ -154,6 +156,65 @@ func ExecuteDelivery(
 		)
 		if err != nil {
 			return err
+		}
+
+		return fmt.Errorf("%s", deliveryError)
+	}
+
+	// 429 too many requests
+	if response.StatusCode == http.StatusTooManyRequests {
+		deliveryError := fmt.Sprintf("destination returned status %d", response.StatusCode)
+
+		var nextAttemptAt *time.Time
+
+		// Store the time when the next retry should happen
+		if attempt < delivery.MaxAttempts {
+			retryAfter := response.Header.Get("Retry-After")
+			
+			// Use the server's Retry-After value when provided
+			if retryAfter != "" {
+				seconds, err := strconv.Atoi(retryAfter)
+				if err == nil && seconds >= 0 {
+					next := time.Now().Add(time.Duration(seconds) * time.Second)
+					nextAttemptAt = &next
+				}
+			}
+			
+			// Use exponential backoff with jitter when Retry-After is not provided
+			if nextAttemptAt == nil {
+				delay := time.Duration(1<<uint(attempt-1)) * time.Second
+				jitter := time.Duration(rand.Float64() * float64(time.Second))
+				next := time.Now().Add(delay + jitter)
+				nextAttemptAt = &next
+			}
+		}
+
+		// Update delivery when the destination HTTP response is failed
+		err = repository.UpdateDeliveryResults(
+			db,
+			ctx,
+			delivery.ID,
+			"failed",
+			&response.StatusCode,
+			&responseBodyString,
+			&deliveryError,
+			nextAttemptAt,
+		)
+		if err != nil {
+			return err
+		}
+
+		// Retry if more attempts are available
+		if attempt < delivery.MaxAttempts {
+			if nextAttemptAt != nil {
+				time.Sleep(time.Until(*nextAttemptAt))
+			}
+			return ExecuteDelivery(
+				db,
+				ctx,
+				delivery.ID,
+				attempt+1,
+			)
 		}
 
 		return fmt.Errorf("%s", deliveryError)
