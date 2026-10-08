@@ -65,6 +65,8 @@ func ExecuteDelivery(
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("User-Agent", "HookFlow/1.0")
 	request.Header.Set("X-HookFlow-Delivery-ID", delivery.ID)
+	request.Header.Set("X-HookFlow-Event-ID", delivery.EventID)
+	request.Header.Set("X-HookFlow-Environment-ID", event.EnvironmentID)
 
 	response, err := client.Do(request)
 	if err != nil {
