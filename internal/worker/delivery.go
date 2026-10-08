@@ -173,10 +173,19 @@ func ExecuteDelivery(
 			
 			// Use the server's Retry-After value when provided
 			if retryAfter != "" {
+				// for seconds
 				seconds, err := strconv.Atoi(retryAfter)
 				if err == nil && seconds >= 0 {
 					next := time.Now().Add(time.Duration(seconds) * time.Second)
 					nextAttemptAt = &next
+				}
+				
+				// for date and time
+				if nextAttemptAt == nil {
+					retryTime, err := http.ParseTime(retryAfter)
+					if err == nil {
+						nextAttemptAt = &retryTime
+					}
 				}
 			}
 			
