@@ -56,5 +56,6 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 	mux.Handle("GET /environment/{env_id}/delivery/{id}", middleware.Auth(handler.GetEnvironmentDelivery(db)))
 	mux.Handle("GET /event/{evt_id}/deliveries", middleware.Auth(handler.ListEventDeliveries(db)))
 	mux.Handle("GET /event/{evt_id}/delivery/{id}", middleware.Auth(handler.GetEventDelivery(db)))
+	mux.Handle("GET /delivery/{del_id}/attempts", middleware.Auth(handler.ListDeliveryAttemptsByDelivery(db)))
 	return mux
 }

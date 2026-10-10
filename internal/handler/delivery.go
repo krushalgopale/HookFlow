@@ -101,7 +101,6 @@ func ListEnvironmentDeliveries(db *pgxpool.Pool) http.HandlerFunc {
 	}
 }
 
-
 func GetEventDelivery(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Path parameter
@@ -148,7 +147,6 @@ func GetEventDelivery(db *pgxpool.Pool) http.HandlerFunc {
 	}
 }
 
-
 func ListEventDeliveries(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Path parameter
@@ -184,6 +182,53 @@ func ListEventDeliveries(db *pgxpool.Pool) http.HandlerFunc {
 		// Server response
 		response := models.DeliveriesResponse{
 			Deliveries: deliveries,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
+func ListDeliveryAttemptsByDelivery(db *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Path parameter
+		deliveryID := r.PathValue("del_id")
+
+		// Get User Id from request context
+		userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Check delivery ownership
+		belongs, err := repository.DeliveryBelongsToUser(db, r.Context(), deliveryID, userID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if !belongs {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
+		// Database operation
+		deliveryAttempts, err := repository.ListDeliveryAttemptByDeliveryID(
+			db,
+			r.Context(),
+			deliveryID,
+		)
+		if err != nil {
+			http.Error(w, "Failed to fetch delivery attempts", http.StatusInternalServerError)
+			return
+		}
+
+		// Server response
+		response := models.DeliveryAttemptsResponse{
+			DeliveryAttempts: deliveryAttempts,
 		}
 
 		w.Header().Set("Content-Type", "application/json")

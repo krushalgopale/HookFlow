@@ -39,8 +39,19 @@ type DeliveryListItem struct {
 	CreatedAt       time.Time `json:"created_at"`
 }
 
+type DeliveryAttemptListItem struct {
+	DestinationName string    `json:"destination_name"`
+	AttemptNumber   int       `json:"attempt_number"`
+	Status          string    `json:"status"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
 type DeliveriesResponse struct {
-	Deliveries []DeliveryListItem
+	Deliveries []DeliveryListItem `json:"deliveries"`
+}
+
+type DeliveryAttemptsResponse struct {
+	DeliveryAttempts []DeliveryAttemptListItem `json:"delivery_attempts"`
 }
 
 type DeliveryResponse struct {

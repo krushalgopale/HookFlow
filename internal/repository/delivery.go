@@ -29,6 +29,27 @@ func SaveDelivery(
 	return err
 }
 
+func DeliveryBelongsToUser(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	deliveryID string,
+	userID string,
+) (bool, error) {
+	var belongs bool
+
+	err := db.QueryRow(
+		ctx,
+		`SELECT EXISTS (SELECT 1 FROM deliveries d INNER JOIN events e ON e.id = d.event_id INNER JOIN environments env ON env.id = e.environment_id INNER JOIN tenants t ON t.id = env.tenant_id WHERE d.id = $1 AND t.user_id = $2)`,
+		deliveryID,
+		userID,
+	).Scan(&belongs)
+	if err != nil {
+		return false, err
+	}
+
+	return belongs, nil
+}
+
 func GetDeliveryByEnvironment(
 	db *pgxpool.Pool,
 	ctx context.Context,
@@ -176,6 +197,7 @@ func ListDeliveriesByEvent(
 	return deliveries, nil
 }
 
+// Delivery Execution
 func UpdateDeliveryResults(
 	db *pgxpool.Pool,
 	ctx context.Context,
@@ -255,4 +277,44 @@ func SaveDeliveryAttempt(
 	}
 
 	return nil
+}
+
+func ListDeliveryAttemptByDeliveryID(
+	db *pgxpool.Pool,
+	ctx context.Context,
+	deliveryID string,
+) ([]models.DeliveryAttemptListItem, error) {
+	rows, err := db.Query(
+		ctx,
+		`SELECT dest.name, da.attempt_number, da.status, da.created_at FROM delivery_attempts da INNER JOIN deliveries d ON d.id = da.delivery_id INNER JOIN destinations dest ON d.destination_id = dest.id WHERE da.delivery_id = $1 ORDER BY da.attempt_number ASC`,
+		deliveryID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var deliveryAttempts []models.DeliveryAttemptListItem
+
+	for rows.Next() {
+		var deliveryAttempt models.DeliveryAttemptListItem
+
+		err := rows.Scan(
+			&deliveryAttempt.DestinationName,
+			&deliveryAttempt.AttemptNumber,
+			&deliveryAttempt.Status,
+			&deliveryAttempt.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		deliveryAttempts = append(deliveryAttempts, deliveryAttempt)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return deliveryAttempts, nil
 }
