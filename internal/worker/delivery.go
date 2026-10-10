@@ -81,23 +81,23 @@ func ExecuteDelivery(
 
 	response, err := client.Do(request)
 	if err != nil {
-
+		requestErr := err
 		deliveryError := err.Error()
 
 		// Save each delivery attempts
 		attemptRecord := models.DeliveryAttempt{
 			ID:             "att_" + uuid.New().String(),
 			DeliveryID:     delivery.ID,
-			AttemptNmuber:  attempt,
+			AttemptNumber:  attempt,
 			Status:         "failed",
 			ResponseStatus: nil,
 			ResponseBody:   nil,
 			Error:          &deliveryError,
 		}
 
-		err = repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
-		if err != nil {
-			return err
+		SaveErr := repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
+		if SaveErr != nil {
+			return SaveErr
 		}
 
 		var nextAttemptAt *time.Time
@@ -139,7 +139,7 @@ func ExecuteDelivery(
 			)
 		}
 
-		return err
+		return requestErr
 	}
 
 	// Close the response body after reading it
@@ -161,16 +161,16 @@ func ExecuteDelivery(
 		attemptRecord := models.DeliveryAttempt{
 			ID:             "att_" + uuid.New().String(),
 			DeliveryID:     delivery.ID,
-			AttemptNmuber:  attempt,
+			AttemptNumber:  attempt,
 			Status:         "success",
 			ResponseStatus: &response.StatusCode,
 			ResponseBody:   &responseBodyString,
 			Error:          nil,
 		}
 
-		err = repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
-		if err != nil {
-			return err
+		saveErr := repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
+		if saveErr != nil {
+			return saveErr
 		}
 
 		// Update successful delivery result
@@ -203,16 +203,16 @@ func ExecuteDelivery(
 		attemptRecord := models.DeliveryAttempt{
 			ID:             "att_" + uuid.New().String(),
 			DeliveryID:     delivery.ID,
-			AttemptNmuber:  attempt,
+			AttemptNumber:  attempt,
 			Status:         "failed",
 			ResponseStatus: &response.StatusCode,
 			ResponseBody:   &responseBodyString,
 			Error:          &deliveryError,
 		}
 
-		err = repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
-		if err != nil {
-			return err
+		saveErr := repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
+		if saveErr != nil {
+			return saveErr
 		}
 
 		err := repository.UpdateDeliveryResults(
@@ -240,16 +240,16 @@ func ExecuteDelivery(
 		attemptRecord := models.DeliveryAttempt{
 			ID:             "att_" + uuid.New().String(),
 			DeliveryID:     delivery.ID,
-			AttemptNmuber:  attempt,
+			AttemptNumber:  attempt,
 			Status:         "failed",
 			ResponseStatus: &response.StatusCode,
 			ResponseBody:   &responseBodyString,
 			Error:          &deliveryError,
 		}
 
-		err = repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
-		if err != nil {
-			return err
+		saveErr := repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
+		if saveErr != nil {
+			return saveErr
 		}
 
 		var nextAttemptAt *time.Time
@@ -324,16 +324,16 @@ func ExecuteDelivery(
 		attemptRecord := models.DeliveryAttempt{
 			ID:             "att_" + uuid.New().String(),
 			DeliveryID:     delivery.ID,
-			AttemptNmuber:  attempt,
+			AttemptNumber:  attempt,
 			Status:         "failed",
 			ResponseStatus: &response.StatusCode,
 			ResponseBody:   &responseBodyString,
 			Error:          &deliveryError,
 		}
 
-		err = repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
-		if err != nil {
-			return err
+		saveErr := repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
+		if saveErr != nil {
+			return saveErr
 		}
 
 		var nextAttemptAt *time.Time
