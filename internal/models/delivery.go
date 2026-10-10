@@ -24,7 +24,7 @@ type Delivery struct {
 type DeliveryAttempt struct {
 	ID             string    `json:"id"`
 	DeliveryID     string    `json:"delivery_id"`
-	AttemptNmuber  int       `json:"attempt_number"`
+	AttemptNumber  int       `json:"attempt_number"`
 	Status         string    `json:"status"`
 	ResponseStatus *int      `json:"response_status,omitempty"`
 	ResponseBody   *string   `json:"response_body,omitempty"`
