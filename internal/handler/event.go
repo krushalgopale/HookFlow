@@ -182,8 +182,8 @@ func ListEvents(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Query Parameter
-		limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
-		offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+		limit, limitErr := strconv.Atoi(r.URL.Query().Get("limit"))
+		offset, offsetErr := strconv.Atoi(r.URL.Query().Get("offset"))
 
 		// Defualt Limit Value
 		if limit == 0 {
@@ -191,12 +191,12 @@ func ListEvents(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Validation of Query parameter
-		if err != nil && r.URL.Query().Get("limit") != "" {
+		if limitErr != nil && r.URL.Query().Get("limit") != "" {
 			http.Error(w, "Invalid limit", http.StatusBadRequest)
 			return
 		}
 
-		if err != nil && r.URL.Query().Get("offset") != "" {
+		if offsetErr != nil && r.URL.Query().Get("offset") != "" {
 			http.Error(w, "Invalid offset", http.StatusBadRequest)
 			return
 		}
