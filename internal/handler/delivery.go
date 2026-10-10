@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -81,8 +82,43 @@ func ListEnvironmentDeliveries(db *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
+		// Query Parameter
+		limit, limitErr := strconv.Atoi(r.URL.Query().Get("limit"))
+		offset, offsetErr := strconv.Atoi(r.URL.Query().Get("offset"))
+
+		// Defualt Limit Value
+		if limit == 0 {
+			limit = 10
+		}
+
+		// Validation of Query parameter
+		if limitErr != nil && r.URL.Query().Get("limit") != "" {
+			http.Error(w, "Invalid limit", http.StatusBadRequest)
+			return
+		}
+
+		if offsetErr != nil && r.URL.Query().Get("offset") != "" {
+			http.Error(w, "Invalid offset", http.StatusBadRequest)
+			return
+		}
+
+		if limit < 0 || offset < 0 {
+			http.Error(w, "limit or offset cannot be negative", http.StatusBadRequest)
+			return
+		}
+
+		if limit > 100 {
+			http.Error(w, "limit cannot be greater than 100", http.StatusBadRequest)
+			return
+		}
+
+		if offset > 1000000 {
+			http.Error(w, "offset cannot be greater than 1000000", http.StatusBadRequest)
+			return
+		}
+
 		// Database operation
-		deliveries, err := repository.ListDeliveriesByEnvironment(db, r.Context(), environmentID)
+		deliveries, err := repository.ListDeliveriesByEnvironment(db, r.Context(), environmentID, limit, offset)
 		// Error handling
 		if err != nil {
 			http.Error(w, "Failed to fetch deliveries", http.StatusInternalServerError)
@@ -215,12 +251,44 @@ func ListDeliveryAttemptsByDelivery(db *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
+		// Query Parameter
+		limit, limitErr := strconv.Atoi(r.URL.Query().Get("limit"))
+		offset, offsetErr := strconv.Atoi(r.URL.Query().Get("offset"))
+
+		// Defualt Limit Value
+		if limit == 0 {
+			limit = 10
+		}
+
+		// Validation of Query parameter
+		if limitErr != nil && r.URL.Query().Get("limit") != "" {
+			http.Error(w, "Invalid limit", http.StatusBadRequest)
+			return
+		}
+
+		if offsetErr != nil && r.URL.Query().Get("offset") != "" {
+			http.Error(w, "Invalid offset", http.StatusBadRequest)
+			return
+		}
+
+		if limit < 0 || offset < 0 {
+			http.Error(w, "limit or offset cannot be negative", http.StatusBadRequest)
+			return
+		}
+
+		if limit > 100 {
+			http.Error(w, "limit cannot be greater than 100", http.StatusBadRequest)
+			return
+		}
+
+		if offset > 1000000 {
+			http.Error(w, "offset cannot be greater than 1000000", http.StatusBadRequest)
+			return
+		}
+
+
 		// Database operation
-		deliveryAttempts, err := repository.ListDeliveryAttemptByDeliveryID(
-			db,
-			r.Context(),
-			deliveryID,
-		)
+		deliveryAttempts, err := repository.ListDeliveryAttemptByDeliveryID(db, r.Context(), deliveryID, limit, offset)
 		if err != nil {
 			http.Error(w, "Failed to fetch delivery attempts", http.StatusInternalServerError)
 			return

@@ -88,11 +88,15 @@ func ListDeliveriesByEnvironment(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	environmentID string,
+	limit int,
+	offset int,
 ) ([]models.DeliveryListItem, error) {
 	rows, err := db.Query(
 		ctx,
-		`SELECT d.status, e.type, dest.name, d.created_at FROM deliveries d INNER JOIN destinations dest ON dest.id = d.destination_id INNER JOIN events e ON d.event_id = e.id WHERE e.environment_id = $1 ORDER BY d.created_at DESC`,
+		`SELECT d.status, e.type, dest.name, d.created_at FROM deliveries d INNER JOIN destinations dest ON dest.id = d.destination_id INNER JOIN events e ON d.event_id = e.id WHERE e.environment_id = $1 ORDER BY d.created_at DESC LIMIT $2 OFFSET $3`,
 		environmentID,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, err
@@ -266,7 +270,7 @@ func SaveDeliveryAttempt(
 		`INSERT INTO delivery_attempts (id, delivery_id, attempt_number, status, response_status, response_body, error) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		attempt.ID,
 		attempt.DeliveryID,
-		attempt.AttemptNmuber,
+		attempt.AttemptNumber,
 		attempt.Status,
 		attempt.ResponseStatus,
 		attempt.ResponseBody,
@@ -283,11 +287,15 @@ func ListDeliveryAttemptByDeliveryID(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	deliveryID string,
+	limit int,
+	offset int,
 ) ([]models.DeliveryAttemptListItem, error) {
 	rows, err := db.Query(
 		ctx,
-		`SELECT dest.name, da.attempt_number, da.status, da.created_at FROM delivery_attempts da INNER JOIN deliveries d ON d.id = da.delivery_id INNER JOIN destinations dest ON d.destination_id = dest.id WHERE da.delivery_id = $1 ORDER BY da.attempt_number ASC`,
+		`SELECT dest.name, da.attempt_number, da.status, da.created_at FROM delivery_attempts da INNER JOIN deliveries d ON d.id = da.delivery_id INNER JOIN destinations dest ON d.destination_id = dest.id WHERE da.delivery_id = $1 ORDER BY da.attempt_number ASC LIMIT $2 OFFSET $3`,
 		deliveryID,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, err
