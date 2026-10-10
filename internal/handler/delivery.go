@@ -118,7 +118,7 @@ func ListEnvironmentDeliveries(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Database operation
-		deliveries, err := repository.ListDeliveriesByEnvironment(db, r.Context(), environmentID, limit, offset)
+		deliveries, total, err := repository.ListDeliveriesByEnvironment(db, r.Context(), environmentID, limit, offset)
 		// Error handling
 		if err != nil {
 			http.Error(w, "Failed to fetch deliveries", http.StatusInternalServerError)
@@ -128,6 +128,9 @@ func ListEnvironmentDeliveries(db *pgxpool.Pool) http.HandlerFunc {
 		// Server response
 		response := models.DeliveriesResponse{
 			Deliveries: deliveries,
+			Total: total,
+			Limit: limit,
+			Offset: offset,
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -288,7 +291,7 @@ func ListDeliveryAttemptsByDelivery(db *pgxpool.Pool) http.HandlerFunc {
 
 
 		// Database operation
-		deliveryAttempts, err := repository.ListDeliveryAttemptByDeliveryID(db, r.Context(), deliveryID, limit, offset)
+		deliveryAttempts, total, err := repository.ListDeliveryAttemptByDeliveryID(db, r.Context(), deliveryID, limit, offset)
 		if err != nil {
 			http.Error(w, "Failed to fetch delivery attempts", http.StatusInternalServerError)
 			return
@@ -297,6 +300,9 @@ func ListDeliveryAttemptsByDelivery(db *pgxpool.Pool) http.HandlerFunc {
 		// Server response
 		response := models.DeliveryAttemptsResponse{
 			DeliveryAttempts: deliveryAttempts,
+			Total: total,
+			Limit: limit,
+			Offset: offset,
 		}
 
 		w.Header().Set("Content-Type", "application/json")

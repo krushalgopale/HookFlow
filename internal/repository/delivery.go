@@ -90,7 +90,7 @@ func ListDeliveriesByEnvironment(
 	environmentID string,
 	limit int,
 	offset int,
-) ([]models.DeliveryListItem, error) {
+) ([]models.DeliveryListItem, int, error) {
 	rows, err := db.Query(
 		ctx,
 		`SELECT d.status, e.type, dest.name, d.created_at FROM deliveries d INNER JOIN destinations dest ON dest.id = d.destination_id INNER JOIN events e ON d.event_id = e.id WHERE e.environment_id = $1 ORDER BY d.created_at DESC LIMIT $2 OFFSET $3`,
@@ -99,7 +99,7 @@ func ListDeliveriesByEnvironment(
 		offset,
 	)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -115,17 +115,27 @@ func ListDeliveriesByEnvironment(
 			&delivery.CreatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		deliveries = append(deliveries, delivery)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return deliveries, nil
+	var total int
+
+	err = db.QueryRow(
+		ctx,
+		`SELECT COUNT(*) FROM events`,
+	).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return deliveries, total, nil
 }
 
 func GetDeliveryByEvent(
@@ -289,7 +299,7 @@ func ListDeliveryAttemptByDeliveryID(
 	deliveryID string,
 	limit int,
 	offset int,
-) ([]models.DeliveryAttemptListItem, error) {
+) ([]models.DeliveryAttemptListItem, int, error) {
 	rows, err := db.Query(
 		ctx,
 		`SELECT dest.name, da.attempt_number, da.status, da.created_at FROM delivery_attempts da INNER JOIN deliveries d ON d.id = da.delivery_id INNER JOIN destinations dest ON d.destination_id = dest.id WHERE da.delivery_id = $1 ORDER BY da.attempt_number ASC LIMIT $2 OFFSET $3`,
@@ -298,7 +308,7 @@ func ListDeliveryAttemptByDeliveryID(
 		offset,
 	)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -314,15 +324,25 @@ func ListDeliveryAttemptByDeliveryID(
 			&deliveryAttempt.CreatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		deliveryAttempts = append(deliveryAttempts, deliveryAttempt)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return deliveryAttempts, nil
+	var total int
+
+	err = db.QueryRow(
+		ctx,
+		`SELECT COUNT(*) FROM events`,
+	).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return deliveryAttempts, total, nil
 }

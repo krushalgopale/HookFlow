@@ -48,10 +48,16 @@ type DeliveryAttemptListItem struct {
 
 type DeliveriesResponse struct {
 	Deliveries []DeliveryListItem `json:"deliveries"`
+	Limit      int                `json:"limit,omitempty"`
+	Offset     int                `json:"offset,omitempty"`
+	Total      int                `json:"total,omitempty"`
 }
 
 type DeliveryAttemptsResponse struct {
 	DeliveryAttempts []DeliveryAttemptListItem `json:"delivery_attempts"`
+	Limit            int                       `json:"limit"`
+	Offset           int                       `json:"offset"`
+	Total            int                       `json:"total"`
 }
 
 type DeliveryResponse struct {
