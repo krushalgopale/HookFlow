@@ -115,7 +115,7 @@ func GetEventDelivery(db *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
-		// Check environment ownership
+		// Check event ownership
 		belongs, err := repository.EventBelongsToUser(db, r.Context(), eventID, userID)
 		if err != nil {
 			http.Error(w, "Failed to check event ownership", http.StatusInternalServerError)
@@ -128,7 +128,7 @@ func GetEventDelivery(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		// Database operation
-		delivery, err := repository.GetDeliveryByEnvironment(db, r.Context(), deliveryID, eventID)
+		delivery, err := repository.GetDeliveryByEvent(db, r.Context(), deliveryID, eventID)
 		// Error handling
 		if err != nil {
 			if err == pgx.ErrNoRows {
@@ -161,7 +161,7 @@ func ListEventDeliveries(db *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
-		// Check environment ownership
+		// Check event ownership
 		belongs, err := repository.EventBelongsToUser(db, r.Context(), eventID, userID)
 		if err != nil {
 			http.Error(w, "failed to check event ownership", http.StatusInternalServerError)

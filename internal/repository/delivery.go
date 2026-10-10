@@ -39,7 +39,7 @@ func GetDeliveryByEnvironment(
 
 	err := db.QueryRow(
 		ctx,
-		`SELECT d.id, d.event_id, d.destination_id, e.type, d.status, d.response_status, d.response_body, d.error, d.attempt_count, d.created_at, d.updated_at FROM deliveries d INNER JOIN events e ON d.event_id = e.id WHERE d.id = $1 AND e.environment_id = $2`,
+		`SELECT d.id, d.event_id, d.destination_id, e.type, dest.name, d.status, d.response_status, d.response_body, d.error, d.attempt_count, d.created_at, d.updated_at FROM deliveries d INNER JOIN destinations dest ON d.destination_id = dest.id INNER JOIN events e ON d.event_id = e.id WHERE d.id = $1 AND e.environment_id = $2`,
 		deliveryID,
 		environmentID,
 	).Scan(
@@ -47,6 +47,7 @@ func GetDeliveryByEnvironment(
 		&delivery.EventID,
 		&delivery.DestinationID,
 		&delivery.EventType,
+		&delivery.DestinationName,
 		&delivery.Status,
 		&delivery.ResponseStatus,
 		&delivery.ResponseBody,
@@ -69,7 +70,7 @@ func ListDeliveriesByEnvironment(
 ) ([]models.DeliveryListItem, error) {
 	rows, err := db.Query(
 		ctx,
-		`SELECT d.status, e.type, d.created_at FROM deliveries d INNER JOIN events e ON d.event_id = e.id WHERE e.environment_id = $1 ORDER BY d.created_at DESC`,
+		`SELECT d.status, e.type, dest.name, d.created_at FROM deliveries d INNER JOIN destinations dest ON dest.id = d.destination_id INNER JOIN events e ON d.event_id = e.id WHERE e.environment_id = $1 ORDER BY d.created_at DESC`,
 		environmentID,
 	)
 	if err != nil {
@@ -85,6 +86,7 @@ func ListDeliveriesByEnvironment(
 		err := rows.Scan(
 			&delivery.Status,
 			&delivery.EventType,
+			&delivery.DestinationName,
 			&delivery.CreatedAt,
 		)
 		if err != nil {
@@ -110,7 +112,7 @@ func GetDeliveryByEvent(
 	var delivery models.Delivery
 	err := db.QueryRow(
 		ctx,
-		`SELECT d.status, e.type, d.created_at FROM deliveries d INNER JOIN events e ON d.event_id = e.id WHERE d.id = $1 AND e.event_id = $2 ORDER BY d.created_at DESC`,
+		`SELECT d.id, d.event_id, d.destination_id, e.type, dest.name, d.status, d.response_status, d.response_body, d.error, d.attempt_count, d.created_at, d.updated_at FROM deliveries d INNER JOIN destinations dest ON d.destination_id = dest.id INNER JOIN events e ON d.event_id = e.id WHERE d.id = $1 AND d.event_id = $2`,
 		deliveryID,
 		eventID,
 	).Scan(
@@ -118,6 +120,7 @@ func GetDeliveryByEvent(
 		&delivery.EventID,
 		&delivery.DestinationID,
 		&delivery.EventType,
+		&delivery.DestinationName,
 		&delivery.Status,
 		&delivery.ResponseStatus,
 		&delivery.ResponseBody,
@@ -140,7 +143,7 @@ func ListDeliveriesByEvent(
 ) ([]models.DeliveryListItem, error) {
 	rows, err := db.Query(
 		ctx,
-		`SELECT  d.status, e.type, d.created_at FROM deliveries d INNER JOIN events e ON d.event_id = e.id WHERE d.event_id = $1 ORDER BY d.created_at DESC`,
+		`SELECT  d.status, e.type, dest.name, d.created_at FROM deliveries d INNER JOIN destinations dest ON d.destination_id = dest.id INNER JOIN events e ON d.event_id = e.id WHERE d.event_id = $1 ORDER BY d.created_at DESC`,
 		eventID,
 	)
 	if err != nil {
@@ -156,6 +159,7 @@ func ListDeliveriesByEvent(
 		err := rows.Scan(
 			&delivery.Status,
 			&delivery.EventType,
+			&delivery.DestinationName,
 			&delivery.CreatedAt,
 		)
 		if err != nil {
