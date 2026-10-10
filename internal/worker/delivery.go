@@ -148,7 +148,54 @@ func ExecuteDelivery(
 	// Read response body returned by the destination
 	responseBody, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
 	if err != nil {
-		return err
+		deliveryError := fmt.Sprintf("failed to read destination response body: %v", err)
+
+		attemptRecord := models.DeliveryAttempt{
+			ID:             "att_" + uuid.New().String(),
+			DeliveryID:     delivery.ID,
+			AttemptNumber:  attempt,
+			Status:         "failed",
+			ResponseStatus: &response.StatusCode,
+			Error:          &deliveryError,
+		}
+
+		saveErr := repository.SaveDeliveryAttempt(db, ctx, attemptRecord)
+		if saveErr != nil {
+			return saveErr
+		}
+
+		var nextAttemptAt *time.Time
+		if attempt < delivery.MaxAttempts {
+			delay := time.Duration(1<<uint(attempt-1)) * time.Second
+			jitter := time.Duration(rand.Float64() * float64(time.Second))
+			next := time.Now().Add(delay + jitter)
+			nextAttemptAt = &next
+		}
+
+		updateErr := repository.UpdateDeliveryResults(
+			db,
+			ctx,
+			delivery.ID,
+			"failed",
+			&response.StatusCode,
+			nil,
+			&deliveryError,
+			nextAttemptAt,
+		)
+		if updateErr != nil {
+			return updateErr
+		}
+
+		if attempt < delivery.MaxAttempts {
+			if nextAttemptAt != nil {
+				time.Sleep(time.Until(*nextAttemptAt))
+			}
+
+			return ExecuteDelivery(db, ctx, delivery.ID, attempt+1)
+		}
+
+		return fmt.Errorf("%s", deliveryError)
+
 	}
 
 	// Convert the response body from bytes to string
@@ -174,7 +221,7 @@ func ExecuteDelivery(
 		}
 
 		// Update successful delivery result
-		err := repository.UpdateDeliveryResults(
+		updateErr := repository.UpdateDeliveryResults(
 			db,
 			ctx,
 			delivery.ID,
@@ -184,8 +231,8 @@ func ExecuteDelivery(
 			nil,
 			nil,
 		)
-		if err != nil {
-			return err
+		if updateErr != nil {
+			return updateErr
 		}
 		return nil
 	}
@@ -215,7 +262,7 @@ func ExecuteDelivery(
 			return saveErr
 		}
 
-		err := repository.UpdateDeliveryResults(
+		UpdateErr := repository.UpdateDeliveryResults(
 			db,
 			ctx,
 			delivery.ID,
@@ -225,8 +272,8 @@ func ExecuteDelivery(
 			&deliveryError,
 			nil,
 		)
-		if err != nil {
-			return err
+		if UpdateErr != nil {
+			return UpdateErr
 		}
 
 		return fmt.Errorf("%s", deliveryError)
@@ -286,7 +333,7 @@ func ExecuteDelivery(
 		}
 
 		// Update delivery when the destination HTTP response is failed
-		err = repository.UpdateDeliveryResults(
+		updtaeErr := repository.UpdateDeliveryResults(
 			db,
 			ctx,
 			delivery.ID,
@@ -296,8 +343,8 @@ func ExecuteDelivery(
 			&deliveryError,
 			nextAttemptAt,
 		)
-		if err != nil {
-			return err
+		if updtaeErr != nil {
+			return updtaeErr
 		}
 
 		// Retry if more attempts are available
@@ -347,7 +394,7 @@ func ExecuteDelivery(
 		}
 
 		// Update delivery when the destination HTTP response is failed
-		err = repository.UpdateDeliveryResults(
+		updateErr := repository.UpdateDeliveryResults(
 			db,
 			ctx,
 			delivery.ID,
@@ -357,8 +404,8 @@ func ExecuteDelivery(
 			&deliveryError,
 			nextAttemptAt,
 		)
-		if err != nil {
-			return err
+		if updateErr != nil {
+			return updateErr
 		}
 
 		// Retry if more attempts are available
