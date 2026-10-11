@@ -141,8 +141,15 @@ func ListDeliveriesByEnvironment(
 
 	err = db.QueryRow(
 		ctx,
-		`SELECT COUNT(*) FROM events`,
-	).Scan(&total)
+		`SELECT COUNT(*) FROM deliveries d INNER JOIN destinations dest ON dest.id = d.destination_id INNER JOIN events e ON d.event_id = e.id WHERE e.environment_id = $1 AND ($2 = '' OR d.status = $2) AND ($3 = '' OR LOWER(dest.name) = LOWER($3)) AND ($4::timestamptz IS NULL OR d.created_at >= $4) AND ($5::timestamptz IS NULL OR d.created_at <= $5) AND ($6::integer IS NULL OR d.response_status = $6) AND ($7::boolean IS NULL OR ($7 = TRUE AND d.status = 'failed' AND d.attempt_count >= d.max_attempts) OR ($7 = FALSE AND NOT (d.status = 'failed' AND d.attempt_count >= d.max_attempts)))`,
+		environmentID,
+		status,
+		destinationName,
+		from,
+		to,
+		responseStatus,
+		retryExhausted,
+		).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -370,7 +377,13 @@ func ListDeliveryAttemptByDeliveryID(
 
 	err = db.QueryRow(
 		ctx,
-		`SELECT COUNT(*) FROM events`,
+		`SELECT COUNT(*) FROM delivery_attempts da INNER JOIN deliveries d ON d.id = da.delivery_id INNER JOIN destinations dest ON d.destination_id = dest.id WHERE da.delivery_id = $1 AND ($2 = '' OR da.status = $2) AND ($3 = '' OR LOWER(dest.name) = LOWER($3)) AND ($4::timestamptz IS NULL OR da.created_at >= $4) AND ($5::timestamptz IS NULL OR da.created_at <= $5) AND ($6::integer IS NULL OR da.response_status = $6)`,
+		deliveryID,
+		status,
+		destinationName,
+		from,
+		to,
+		responseStatus,
 	).Scan(&total)
 	if err != nil {
 		return nil, 0, err
