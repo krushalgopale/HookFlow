@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -85,6 +86,11 @@ func ListEnvironmentDeliveries(db *pgxpool.Pool) http.HandlerFunc {
 		// Query Parameter
 		limit, limitErr := strconv.Atoi(r.URL.Query().Get("limit"))
 		offset, offsetErr := strconv.Atoi(r.URL.Query().Get("offset"))
+		status := r.URL.Query().Get("status")
+		destinationName := r.URL.Query().Get("destination_name")
+		from, fromErr := parseOptionalTime(r.URL.Query().Get("from")) 
+		to, toErr := parseOptionalTime(r.URL.Query().Get("to"))
+		responseStatusValue := r.URL.Query().Get("response_status") 
 
 		// Defualt Limit Value
 		if limit == 0 {
@@ -117,8 +123,38 @@ func ListEnvironmentDeliveries(db *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
+		if status != "" && status != "pending" && status != "success" && status != "failed" {
+			http.Error(w, "Invaild status. Allowed values: pending, success, failed", http.StatusBadRequest)
+			return 
+		}
+
+		if fromErr != nil {
+			http.Error(w, "Invalid from timestamp. Use RFC3339 format", http.StatusBadRequest)
+			return 
+		}
+
+		if toErr != nil {
+			http.Error(w, "Invalid from timestamp. Use RFC3339 format", http.StatusBadRequest)
+			return 
+		}
+
+		if from != nil && to != nil && from.After(*to) {
+			http.Error(w, "'From' date and time must be earlier than or equal to 'To' date and time", http.StatusBadRequest)
+			return 
+		}
+
+		var responseStatus *int
+		if responseStatusValue != "" {
+			code, err := strconv.Atoi(responseStatusValue)
+			if err != nil || code < 100 || code > 599 {
+				http.Error(w, "Invalid response_status. Must be an HTTP status code from 100 to 599", http.StatusBadRequest)
+				return 
+			} 
+			responseStatus = &code
+		}
+
 		// Database operation
-		deliveries, total, err := repository.ListDeliveriesByEnvironment(db, r.Context(), environmentID, limit, offset)
+		deliveries, total, err := repository.ListDeliveriesByEnvironment(db, r.Context(), environmentID, status, destinationName,from, to, responseStatus, limit, offset)
 		// Error handling
 		if err != nil {
 			http.Error(w, "Failed to fetch deliveries", http.StatusInternalServerError)
@@ -210,8 +246,45 @@ func ListEventDeliveries(db *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
+		// Query parameter
+		status := r.URL.Query().Get("status")
+		destinationName := r.URL.Query().Get("destination_name")
+		from, fromErr := parseOptionalTime(r.URL.Query().Get("from")) 
+		to, toErr := parseOptionalTime(r.URL.Query().Get("to"))
+		responseStatusValue := r.URL.Query().Get("response_status") 
+
+		if status != "" && status != "pending" && status != "success" && status != "failed" {
+			http.Error(w, "Invaild status. Allowed values: pending, success, failed", http.StatusBadRequest)
+			return 
+		}
+
+		if fromErr != nil {
+			http.Error(w, "Invalid from timestamp. Use RFC3339 format", http.StatusBadRequest)
+			return 
+		}
+
+		if toErr != nil {
+			http.Error(w, "Invalid from timestamp. Use RFC3339 format", http.StatusBadRequest)
+			return 
+		}
+
+		if from != nil && to != nil && from.After(*to) {
+			http.Error(w, "'From' date and time must be earlier than or equal to 'To' date and time", http.StatusBadRequest)
+			return 
+		}
+
+		var responseStatus *int
+		if responseStatusValue != "" {
+			code, err := strconv.Atoi(responseStatusValue)
+			if err != nil || code < 100 || code > 599 {
+				http.Error(w, "Invalid response_status. Must be an HTTP status code from 100 to 599", http.StatusBadRequest)
+				return 
+			} 
+			responseStatus = &code
+		}
+
 		// Database operation
-		deliveries, err := repository.ListDeliveriesByEvent(db, r.Context(), eventID)
+		deliveries, err := repository.ListDeliveriesByEvent(db, r.Context(), eventID, status, destinationName, from, to, responseStatus)
 		// Error handling
 		if err != nil {
 			http.Error(w, "Failed to fetch deliveries", http.StatusInternalServerError)
@@ -257,6 +330,11 @@ func ListDeliveryAttemptsByDelivery(db *pgxpool.Pool) http.HandlerFunc {
 		// Query Parameter
 		limit, limitErr := strconv.Atoi(r.URL.Query().Get("limit"))
 		offset, offsetErr := strconv.Atoi(r.URL.Query().Get("offset"))
+		status := r.URL.Query().Get("status")
+		destinationName := r.URL.Query().Get("destination_name")
+		from, fromErr := parseOptionalTime(r.URL.Query().Get("from")) 
+		to, toErr := parseOptionalTime(r.URL.Query().Get("to"))
+		responseStatusValue := r.URL.Query().Get("response_status") 
 
 		// Defualt Limit Value
 		if limit == 0 {
@@ -289,9 +367,38 @@ func ListDeliveryAttemptsByDelivery(db *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
+		if status != "" && status != "pending" && status != "success" && status != "failed" {
+			http.Error(w, "Invaild status. Allowed values: pending, success, failed", http.StatusBadRequest)
+			return 
+		}
+	
+		if fromErr != nil {
+			http.Error(w, "Invalid from timestamp. Use RFC3339 format", http.StatusBadRequest)
+			return 
+		}
+
+		if toErr != nil {
+			http.Error(w, "Invalid from timestamp. Use RFC3339 format", http.StatusBadRequest)
+			return 
+		}
+
+		if from != nil && to != nil && from.After(*to) {
+			http.Error(w, "'From' date and time must be earlier than or equal to 'To' date and time", http.StatusBadRequest)
+			return 
+		}
+
+		var responseStatus *int
+		if responseStatusValue != "" {
+			code, err := strconv.Atoi(responseStatusValue)
+			if err != nil || code < 100 || code > 599 {
+				http.Error(w, "Invalid response_status. Must be an HTTP status code from 100 to 599", http.StatusBadRequest)
+				return 
+			} 
+			responseStatus = &code
+		}
 
 		// Database operation
-		deliveryAttempts, total, err := repository.ListDeliveryAttemptByDeliveryID(db, r.Context(), deliveryID, limit, offset)
+		deliveryAttempts, total, err := repository.ListDeliveryAttemptByDeliveryID(db, r.Context(), deliveryID, status, destinationName, from, to, responseStatus, limit, offset)
 		if err != nil {
 			http.Error(w, "Failed to fetch delivery attempts", http.StatusInternalServerError)
 			return
@@ -310,4 +417,17 @@ func ListDeliveryAttemptsByDelivery(db *pgxpool.Pool) http.HandlerFunc {
 
 		json.NewEncoder(w).Encode(response)
 	}
+}
+
+func parseOptionalTime(value string) (*time.Time, error) {
+	if value == "" {
+		return nil, nil
+	}
+
+	t, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return nil, err
+	}
+
+	return &t, nil
 }
