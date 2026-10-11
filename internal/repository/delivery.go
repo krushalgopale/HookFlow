@@ -93,18 +93,20 @@ func ListDeliveriesByEnvironment(
 	from *time.Time,
 	to *time.Time,
 	responseStatus *int,
+	retryExhausted *bool,
 	limit int,
 	offset int,
 ) ([]models.DeliveryListItem, int, error) {
 	rows, err := db.Query(
 		ctx,
-		`SELECT d.status, e.type, dest.name, d.created_at FROM deliveries d INNER JOIN destinations dest ON dest.id = d.destination_id INNER JOIN events e ON d.event_id = e.id WHERE e.environment_id = $1 AND ($2 = '' OR d.status = $2) AND ($3 = '' OR LOWER(dest.name) = LOWER($3)) AND ($4::timestamptz IS NULL OR d.created_at >= $4) AND ($5::timestamptz IS NULL OR d.created_at <= $5) AND ($6::integer IS NULL OR d.response_status = $6) ORDER BY d.created_at DESC LIMIT $7 OFFSET $8`,
+		`SELECT d.status, e.type, dest.name, d.created_at FROM deliveries d INNER JOIN destinations dest ON dest.id = d.destination_id INNER JOIN events e ON d.event_id = e.id WHERE e.environment_id = $1 AND ($2 = '' OR d.status = $2) AND ($3 = '' OR LOWER(dest.name) = LOWER($3)) AND ($4::timestamptz IS NULL OR d.created_at >= $4) AND ($5::timestamptz IS NULL OR d.created_at <= $5) AND ($6::integer IS NULL OR d.response_status = $6) AND ($7::boolean IS NULL OR ($7 = TRUE AND d.status = 'failed' AND d.attempt_count >= d.max_attempts) OR ($7 = FALSE AND NOT (d.status = 'failed' AND d.attempt_count >= d.max_attempts))) ORDER BY d.created_at DESC LIMIT $8 OFFSET $9`,
 		environmentID,
 		status,
 		destinationName,
 		from,
 		to,
 		responseStatus,
+		retryExhausted,
 		limit,
 		offset,
 	)
