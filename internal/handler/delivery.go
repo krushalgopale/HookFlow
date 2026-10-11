@@ -90,7 +90,8 @@ func ListEnvironmentDeliveries(db *pgxpool.Pool) http.HandlerFunc {
 		destinationName := r.URL.Query().Get("destination_name")
 		from, fromErr := parseOptionalTime(r.URL.Query().Get("from")) 
 		to, toErr := parseOptionalTime(r.URL.Query().Get("to"))
-		responseStatusValue := r.URL.Query().Get("response_status") 
+		responseStatusValue := r.URL.Query().Get("response_status")
+		retryExhaustedValue := r.URL.Query().Get("retry_exhausted")
 
 		// Defualt Limit Value
 		if limit == 0 {
@@ -153,8 +154,18 @@ func ListEnvironmentDeliveries(db *pgxpool.Pool) http.HandlerFunc {
 			responseStatus = &code
 		}
 
+		var retryExhausted *bool
+		if retryExhaustedValue != "" {
+			value, err := strconv.ParseBool(retryExhaustedValue)
+			if err != nil {
+				http.Error(w, "Invalid retry exhausted. Allowed values: true, false", http.StatusBadRequest)
+				return 
+			}
+			retryExhausted = &value
+		}
+
 		// Database operation
-		deliveries, total, err := repository.ListDeliveriesByEnvironment(db, r.Context(), environmentID, status, destinationName,from, to, responseStatus, limit, offset)
+		deliveries, total, err := repository.ListDeliveriesByEnvironment(db, r.Context(), environmentID, status, destinationName,from, to, responseStatus, retryExhausted, limit, offset)
 		// Error handling
 		if err != nil {
 			http.Error(w, "Failed to fetch deliveries", http.StatusInternalServerError)
