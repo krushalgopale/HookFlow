@@ -36,6 +36,11 @@ func main() {
 
 	log.Println("Connected to RabbitMQ")
 
+	err = broker.ConsumeDeliveries(conn, db)
+	if err != nil {
+		log.Fatalf("Failed to start consumer: %v", err)
+	}
+
 	// Routes
 	mux := routes.Routes(db, conn)
 
