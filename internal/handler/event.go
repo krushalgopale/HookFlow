@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -10,13 +9,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/krushalgopale/HookFlow/internal/broker"
 	"github.com/krushalgopale/HookFlow/internal/middleware"
 	"github.com/krushalgopale/HookFlow/internal/models"
 	"github.com/krushalgopale/HookFlow/internal/repository"
-	"github.com/krushalgopale/HookFlow/internal/worker"
+	"github.com/rabbitmq/amqp091-go"
 )
 
-func CreateEvent(db *pgxpool.Pool) http.HandlerFunc {
+func CreateEvent(db *pgxpool.Pool, conn *amqp091.Connection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var event models.Event
 
@@ -82,18 +82,19 @@ func CreateEvent(db *pgxpool.Pool) http.HandlerFunc {
 		for _, destination := range destinations {
 			deliveryID := "del_" + uuid.New().String()
 
+			// Database operation
 			err := repository.SaveDelivery(db, r.Context(), deliveryID, eventID, destination.ID)
 			if err != nil {
 				http.Error(w, "Failed to create delivery", http.StatusInternalServerError)
 				return
 			}
 
-			go worker.ExecuteDelivery(
-				db,
-				context.Background(),
-				deliveryID,
-				1,
-				)
+			// Publish Delivery
+			err = broker.PublishDelivery(conn, deliveryID)
+			if err != nil {
+				http.Error(w, "Failed to queue delivery", http.StatusInternalServerError)
+				return 
+			}
 		}
 
 		// Server Response

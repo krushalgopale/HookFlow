@@ -6,9 +6,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/krushalgopale/HookFlow/internal/handler"
 	"github.com/krushalgopale/HookFlow/internal/middleware"
+	"github.com/rabbitmq/amqp091-go"
 )
 
-func Routes(db *pgxpool.Pool) *http.ServeMux {
+func Routes(db *pgxpool.Pool, conn *amqp091.Connection) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Registering Route using HandleFunc/Handle
@@ -40,7 +41,7 @@ func Routes(db *pgxpool.Pool) *http.ServeMux {
 	mux.Handle("GET /environment/{env_id}/api-keys", middleware.Auth(handler.ListAPIKeys(db)))
 	
 	// Event
-	mux.Handle("POST /event", middleware.ApiKeyAuth(db, handler.CreateEvent(db)))
+	mux.Handle("POST /event", middleware.ApiKeyAuth(db, handler.CreateEvent(db, conn)))
 	mux.Handle("GET /environment/{env_id}/event/{id}", middleware.Auth(handler.GetEvent(db)))
 	mux.Handle("GET /environment/{env_id}/events", middleware.Auth(handler.ListEvents(db)))
 
