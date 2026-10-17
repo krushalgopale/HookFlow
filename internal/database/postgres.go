@@ -2,13 +2,19 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func Connect() (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	url := os.Getenv("POSTGRES_URL")
+	if url == "" {
+		return nil, fmt.Errorf("POSTGRES_URL is not set in .env")
+	}
+
+	pool, err := pgxpool.New(context.Background(), url)
 	if err != nil {
 		return nil, err
 	}
