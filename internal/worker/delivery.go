@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -21,6 +22,12 @@ import (
 )
 
 const deliveryTimeout = 10 * time.Second
+
+var ErrDeliveryFailed = errors.New("delivery failed")
+
+func IsDeliveryFailed(err error) bool {
+	return errors.Is(err, ErrDeliveryFailed)
+}
 
 func ExecuteDelivery(
 	db *pgxpool.Pool,
@@ -52,6 +59,7 @@ func ExecuteDelivery(
 		return err
 	}
 
+	// Generate an HMAC-SHA256 signature of the payload using the destination's signing secret 
 	mac := hmac.New(sha256.New, []byte(destination.SigningSecret))
 	mac.Write(payload)
 
@@ -139,7 +147,7 @@ func ExecuteDelivery(
 			)
 		}
 
-		return requestErr
+		return fmt.Errorf("%w: %v", ErrDeliveryFailed, requestErr)
 	}
 
 	// Close the response body after reading it
@@ -194,14 +202,14 @@ func ExecuteDelivery(
 			return ExecuteDelivery(db, ctx, delivery.ID, attempt+1)
 		}
 
-		return fmt.Errorf("%s", deliveryError)
+		return fmt.Errorf("%w: %v", ErrDeliveryFailed, deliveryError)
 
 	}
 
 	// Convert the response body from bytes to string
 	responseBodyString := string(responseBody)
 
-	// 2xx Sucess
+	// 2xx Success
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 
 		// Save each delivery attempts
@@ -276,7 +284,7 @@ func ExecuteDelivery(
 			return UpdateErr
 		}
 
-		return fmt.Errorf("%s", deliveryError)
+		return fmt.Errorf("%w: %v", ErrDeliveryFailed, deliveryError)
 	}
 
 	// 429 too many requests
@@ -360,7 +368,7 @@ func ExecuteDelivery(
 			)
 		}
 
-		return fmt.Errorf("%s", deliveryError)
+		return fmt.Errorf("%w: %v", ErrDeliveryFailed, deliveryError)
 	}
 
 	// 5xx Server Error
@@ -421,7 +429,7 @@ func ExecuteDelivery(
 			)
 		}
 
-		return fmt.Errorf("%s", deliveryError)
+		return fmt.Errorf("%w: %v", ErrDeliveryFailed, deliveryError)
 	}
 	return nil
 }
