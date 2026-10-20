@@ -36,9 +36,16 @@ func main() {
 
 	log.Println("Connected to RabbitMQ")
 
+	// Queue declaration
+	err = broker.DeclareDeliveryQueue(conn)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Consumer initialization
 	err = broker.ConsumeDeliveries(conn, db)
 	if err != nil {
-		log.Fatalf("Failed to start consumer: %v", err)
+		log.Fatal(err)
 	}
 
 	// Routes
