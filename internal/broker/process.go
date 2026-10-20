@@ -119,7 +119,5 @@ func processDelivery(workerID int, conn *amqp091.Connection, ch *amqp091.Channel
 		// Retry publishing failed: do not ACK the original message.
 		log.Printf("Worker %d: retry publishing failed for %s: %v", workerID, delivery.DeliveryID, retryErr)
 		return
-	}
-
-	log.Printf("Worker %d stopped", workerID)
+	}	
 }

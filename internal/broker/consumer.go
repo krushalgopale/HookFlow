@@ -60,7 +60,7 @@ func ConsumeDeliveries(conn *amqp091.Connection, db *pgxpool.Pool) error {
 
 	// Process incoming delivery messages in the background
 	for _, consumer := range consumers {
-		go processDelivery(consumer.id, conn, consumer.channel, db, consumer.messages)
+		go runDeliveryWorker(consumer, conn, db) 
 	}
 
 	log.Printf("Started %d delivery workers", deliveryWorkerCount)
