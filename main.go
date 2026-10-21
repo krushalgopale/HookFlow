@@ -1,8 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/krushalgopale/HookFlow/internal/broker"
@@ -54,8 +60,53 @@ func main() {
 	// Logger
 	logger := middleware.Logger(mux)
 
-	log.Println("Starting server on :8080")
+	server := &http.Server{
+		Addr:    "0.0.0.0:8080",
+		Handler: logger,
+	}
+
+	// Listen for Ctrl+C and termination signals
+	signalCtx, stop := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	defer stop()
 
 	// Starting server
-	http.ListenAndServe("0.0.0.0:8080", logger)
+	serverErr := make(chan error, 1)
+	go func() {
+		log.Println("Starting server on :8080")
+		serverErr <- server.ListenAndServe()
+	}()
+
+	// Wait for either a shutdown signal or a server error.
+	select {
+	case <-signalCtx.Done():
+		log.Println("Shutdown signal received")
+
+	case err := <-serverErr:
+		if !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("HTTP server failed: %v", err)
+		}
+	}
+
+	// Give active HTTP requests up to 10 seconds to finish
+	shutdownCtx, cancel := context.WithTimeout(
+		context.Background(),
+		10*time.Second,
+		)
+	defer cancel()
+
+	shutErr := server.Shutdown(shutdownCtx)
+	if shutErr != nil {
+		log.Printf("Graceful HTTP shutdown failed: %v", err)
+
+		closeErr := server.Close()
+		if closeErr != nil {
+			log.Printf("HTTP server close failed: %v", closeErr)
+		}
+	}
+
+	log.Println("HTTP server stopped")
 }
