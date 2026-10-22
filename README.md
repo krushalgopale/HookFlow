@@ -24,4 +24,13 @@
 
 <h3 align="center">Open-source Webhooks-as-a-Service that just flows</h3>
 
-> HookFlow makes webhook delivery simple for developers. Send events through one API, and let HookFlow handle reliable delivery, retries, and asynchronous processing - built with GO 🐹
+> HookFlow makes webhook delivery simple for developers. Send events through one API, and let HookFlow handle the rest - built with GO 🐹
+
+## Features
+
+- Reliable webhook delivery
+- Automatic retries
+- Asynchronous event processing
+- Concurrent delivery workers
+- Delivery status tracking
+- Event filtering
