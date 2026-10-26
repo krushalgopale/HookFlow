@@ -1,5 +1,4 @@
 .env
-services/ai/.venv/
-services/ai/__pycache__/
-services/ai/**/__pycache__/
-services/ai/.env
+ai/.venv/
+ai/__pycache__/
+ai/**/__pycache__/
