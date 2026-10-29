@@ -4,12 +4,13 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/krushalgopale/HookFlow/internal/ai"
 	"github.com/krushalgopale/HookFlow/internal/handler"
 	"github.com/krushalgopale/HookFlow/internal/middleware"
 	"github.com/rabbitmq/amqp091-go"
 )
 
-func Routes(db *pgxpool.Pool, conn *amqp091.Connection) *http.ServeMux {
+func Routes(db *pgxpool.Pool, conn *amqp091.Connection, aiClient *ai.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Registering Route using HandleFunc/Handle
@@ -55,8 +56,8 @@ func Routes(db *pgxpool.Pool, conn *amqp091.Connection) *http.ServeMux {
 	// Delivery
 	mux.Handle("GET /environment/{env_id}/deliveries", middleware.Auth(handler.ListEnvironmentDeliveries(db)))
 	mux.Handle("GET /environment/{env_id}/delivery/{id}", middleware.Auth(handler.GetEnvironmentDelivery(db)))
-	mux.Handle("GET /event/{evt_id}/deliveries", middleware.Auth(handler.ListEventDeliveries(db)))
-	mux.Handle("GET /event/{evt_id}/delivery/{id}", middleware.Auth(handler.GetEventDelivery(db)))
-	mux.Handle("GET /delivery/{del_id}/attempts", middleware.Auth(handler.ListDeliveryAttemptsByDelivery(db)))
+	mux.Handle("GET /environment/{env_id}/event/{evt_id}/deliveries", middleware.Auth(handler.ListEventDeliveries(db)))
+	mux.Handle("GET /environment/{env_id}/event/{evt_id}/delivery/{id}", middleware.Auth(handler.GetEventDelivery(db)))
+	mux.Handle("GET /environment/{env_id}/delivery/{del_id}/attempts", middleware.Auth(handler.ListDeliveryAttemptsByDelivery(db)))
 	return mux
 }

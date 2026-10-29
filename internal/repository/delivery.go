@@ -29,27 +29,6 @@ func SaveDelivery(
 	return err
 }
 
-func DeliveryBelongsToUser(
-	db *pgxpool.Pool,
-	ctx context.Context,
-	deliveryID string,
-	userID string,
-) (bool, error) {
-	var belongs bool
-
-	err := db.QueryRow(
-		ctx,
-		`SELECT EXISTS (SELECT 1 FROM deliveries d INNER JOIN events e ON e.id = d.event_id INNER JOIN environments env ON env.id = e.environment_id INNER JOIN tenants t ON t.id = env.tenant_id WHERE d.id = $1 AND t.user_id = $2)`,
-		deliveryID,
-		userID,
-	).Scan(&belongs)
-	if err != nil {
-		return false, err
-	}
-
-	return belongs, nil
-}
-
 func GetDeliveryByEnvironment(
 	db *pgxpool.Pool,
 	ctx context.Context,
@@ -162,13 +141,15 @@ func GetDeliveryByEvent(
 	ctx context.Context,
 	deliveryID string,
 	eventID string,
+	environmentID string,
 ) (models.Delivery, error) {
 	var delivery models.Delivery
 	err := db.QueryRow(
 		ctx,
-		`SELECT d.id, d.event_id, d.destination_id, e.type, dest.name, d.status, d.response_status, d.response_body, d.error, d.attempt_count, d.created_at, d.updated_at FROM deliveries d INNER JOIN destinations dest ON d.destination_id = dest.id INNER JOIN events e ON d.event_id = e.id WHERE d.id = $1 AND d.event_id = $2`,
+		`SELECT d.id, d.event_id, d.destination_id, e.type, dest.name, d.status, d.response_status, d.response_body, d.error, d.attempt_count, d.created_at, d.updated_at FROM deliveries d INNER JOIN destinations dest ON d.destination_id = dest.id INNER JOIN events e ON d.event_id = e.id WHERE d.id = $1 AND d.event_id = $2 AND e.environment_id = $3`,
 		deliveryID,
 		eventID,
+		environmentID,
 	).Scan(
 		&delivery.ID,
 		&delivery.EventID,
@@ -194,6 +175,7 @@ func ListDeliveriesByEvent(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	eventID string,
+	environmentID string,
 	status string,
 	destinationName string,
 	from *time.Time,
@@ -202,8 +184,9 @@ func ListDeliveriesByEvent(
 ) ([]models.DeliveryListItem, error) {
 	rows, err := db.Query(
 		ctx,
-		`SELECT  d.status, e.type, dest.name, d.created_at FROM deliveries d INNER JOIN destinations dest ON d.destination_id = dest.id INNER JOIN events e ON d.event_id = e.id WHERE d.event_id = $1 AND ($2 = '' OR d.status = $2) AND ($3 = '' OR LOWER(dest.name) = LOWER($3)) AND ($4::timestamptz IS NULL OR d.created_at >= $4) AND ($5::timestamptz IS NULL OR d.created_at <= $5) AND ($6::integer IS NULL OR d.response_status = $6) ORDER BY d.created_at DESC`,
+		`SELECT  d.status, e.type, dest.name, d.created_at FROM deliveries d INNER JOIN destinations dest ON d.destination_id = dest.id INNER JOIN events e ON d.event_id = e.id WHERE d.event_id = $1 AND e.environment_id = $2 AND ($3 = '' OR d.status = $3) AND ($4 = '' OR LOWER(dest.name) = LOWER($4)) AND ($5::timestamptz IS NULL OR d.created_at >= $5) AND ($6::timestamptz IS NULL OR d.created_at <= $6) AND ($7::integer IS NULL OR d.response_status = $7) ORDER BY d.created_at DESC`,
 		eventID,
+		environmentID,
 		status,
 		destinationName,
 		from,
@@ -326,6 +309,7 @@ func ListDeliveryAttemptByDeliveryID(
 	db *pgxpool.Pool,
 	ctx context.Context,
 	deliveryID string,
+	environmentID string,
 	status string,
 	destinationName string,
 	from *time.Time,
@@ -336,8 +320,9 @@ func ListDeliveryAttemptByDeliveryID(
 ) ([]models.DeliveryAttemptListItem, int, error) {
 	rows, err := db.Query(
 		ctx,
-		`SELECT dest.name, da.attempt_number, da.status, da.created_at FROM delivery_attempts da INNER JOIN deliveries d ON d.id = da.delivery_id INNER JOIN destinations dest ON d.destination_id = dest.id WHERE da.delivery_id = $1 AND ($2 = '' OR da.status = $2) AND ($3 = '' OR LOWER(dest.name) = LOWER($3)) AND ($4::timestamptz IS NULL OR da.created_at >= $4) AND ($5::timestamptz IS NULL OR da.created_at <= $5) AND ($6::integer IS NULL OR da.response_status = $6) ORDER BY da.attempt_number ASC LIMIT $7 OFFSET $8`,
+		`SELECT dest.name, da.attempt_number, da.status, da.created_at FROM delivery_attempts da INNER JOIN deliveries d ON d.id = da.delivery_id INNER JOIN destinations dest ON d.destination_id = dest.id WHERE da.delivery_id = $1 AND dest.environment_id = $2 AND ($3 = '' OR da.status = $3) AND ($4 = '' OR LOWER(dest.name) = LOWER($4)) AND ($5::timestamptz IS NULL OR da.created_at >= $5) AND ($6::timestamptz IS NULL OR da.created_at <= $6) AND ($7::integer IS NULL OR da.response_status = $7) ORDER BY da.attempt_number ASC LIMIT $8 OFFSET $9`,
 		deliveryID,
+		environmentID,
 		status,
 		destinationName,
 		from,
@@ -377,8 +362,9 @@ func ListDeliveryAttemptByDeliveryID(
 
 	err = db.QueryRow(
 		ctx,
-		`SELECT COUNT(*) FROM delivery_attempts da INNER JOIN deliveries d ON d.id = da.delivery_id INNER JOIN destinations dest ON d.destination_id = dest.id WHERE da.delivery_id = $1 AND ($2 = '' OR da.status = $2) AND ($3 = '' OR LOWER(dest.name) = LOWER($3)) AND ($4::timestamptz IS NULL OR da.created_at >= $4) AND ($5::timestamptz IS NULL OR da.created_at <= $5) AND ($6::integer IS NULL OR da.response_status = $6)`,
+		`SELECT COUNT(*) FROM delivery_attempts da INNER JOIN deliveries d ON d.id = da.delivery_id INNER JOIN destinations dest ON d.destination_id = dest.id WHERE da.delivery_id = $1 AND dest.environment_id = $2 AND ($3 = '' OR da.status = $3) AND ($4 = '' OR LOWER(dest.name) = LOWER($4)) AND ($5::timestamptz IS NULL OR da.created_at >= $5) AND ($6::timestamptz IS NULL OR da.created_at <= $6) AND ($7::integer IS NULL OR da.response_status = $7)`,
 		deliveryID,
+		environmentID,
 		status,
 		destinationName,
 		from,
