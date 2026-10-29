@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/krushalgopale/HookFlow/internal/ai"
 	"github.com/krushalgopale/HookFlow/internal/broker"
 	"github.com/krushalgopale/HookFlow/internal/database"
 	"github.com/krushalgopale/HookFlow/internal/middleware"
@@ -54,8 +55,16 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// AI initialization  
+	aiURL := os.Getenv("AI_SERVICE_URL")
+	if aiURL == "" {
+		log.Fatal("AI_SERVICE_URL is not set")
+	}
+
+	aiClient := ai.NewClient(aiURL)
+
 	// Routes
-	mux := routes.Routes(db, conn)
+	mux := routes.Routes(db, conn, aiClient)
 
 	// Logger
 	logger := middleware.Logger(mux)
@@ -95,7 +104,7 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(
 		context.Background(),
 		10*time.Second,
-		)
+	)
 	defer cancel()
 
 	shutErr := server.Shutdown(shutdownCtx)

@@ -68,3 +68,47 @@ func (c *Client) Analyze(ctx context.Context, request models.FailureRequest) (mo
 
 	return result, nil
 }
+
+func (c *Client) Investigate(ctx context.Context, request models.InvestigationRequest,) (models.FailureResponse, error) {
+	var result models.FailureResponse
+
+	// JSON marshalling
+	body, err := json.Marshal(request)
+	if err != nil {
+		return result, fmt.Errorf("Failed to marshal investigation request: %w", err)
+	}
+
+
+	// Post request
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		c.baseURL+"/investigate",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return result, fmt.Errorf("Failed to create investigation request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return result, fmt.Errorf("Failed to call AI service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return result, fmt.Errorf(
+			"AI service returned HTTP %d",
+			resp.StatusCode,
+		)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return result, fmt.Errorf("Failed to decode investigation response: %w", err)
+	}
+
+	return result, nil
+}

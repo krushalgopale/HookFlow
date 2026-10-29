@@ -377,3 +377,50 @@ func ListDeliveryAttemptByDeliveryID(
 
 	return deliveryAttempts, total, nil
 }
+
+// AI Delivery
+
+func GetDeliveryAttemptsForInvestigation(
+    db *pgxpool.Pool,
+    ctx context.Context,
+    deliveryID string,
+) ([]models.DeliveryAttempt, error) {
+    // Database operation
+    rows, err := db.Query(
+        ctx,
+        `SELECT id, delivery_id, attempt_number, status, response_status, response_body, error, created_at FROM delivery_attempts WHERE delivery_id = $1 ORDER BY attempt_number ASC`,
+        deliveryID,
+    )
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var attempts []models.DeliveryAttempt
+
+    for rows.Next() {
+        var attempt models.DeliveryAttempt
+
+        err := rows.Scan(
+            &attempt.ID,
+            &attempt.DeliveryID,
+            &attempt.AttemptNumber,
+            &attempt.Status,
+            &attempt.ResponseStatus,
+            &attempt.ResponseBody,
+            &attempt.Error,
+            &attempt.CreatedAt,
+        )
+        if err != nil {
+            return nil, err
+        }
+
+        attempts = append(attempts, attempt)
+    }
+
+    if err := rows.Err(); err != nil {
+        return nil, err
+    }
+
+    return attempts, nil
+}

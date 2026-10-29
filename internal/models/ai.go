@@ -13,5 +13,8 @@ type FailureResponse struct {
 	Confidence        string   `json:"confidence"`
 }
 
-
+type InvestigationRequest struct {
+	Delivery Delivery        `json:"delivery"`
+	Attempts []DeliveryAttempt `json:"attempts"`
+}
 
